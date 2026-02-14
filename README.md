@@ -60,39 +60,79 @@ L'application est accessible sur [http://localhost:3000](http://localhost:3000).
 
 ## Déploiement en production
 
-### Option 1 : Vercel + Turso (recommandé, gratuit)
+### Vercel + Turso (recommandé, gratuit)
 
-1. **Créer une base Turso** :
-   ```bash
-   # Installer le CLI Turso
-   curl -sSfL https://get.tur.so/install.sh | bash
-   
-   # Se connecter
-   turso auth login
-   
-   # Créer une base de données
-   turso db create care-assistant
-   
-   # Obtenir l'URL
-   turso db show care-assistant --url
-   
-   # Créer un token
-   turso db tokens create care-assistant
-   ```
+#### 1. Créer une base de données Turso
 
-2. **Adapter le code pour Turso** :
-   
-   Remplacer `@prisma/adapter-better-sqlite3` par `@prisma/adapter-libsql` dans `src/lib/prisma.ts` et mettre à jour l'initialisation avec l'URL et le token Turso.
+**Installer le CLI Turso** :
 
-3. **Déployer sur Vercel** :
-   - Connecter le repo GitHub à Vercel
-   - Configurer les variables d'environnement :
-     - `DATABASE_URL` : URL Turso (`libsql://...`)
-     - `DATABASE_AUTH_TOKEN` : Token Turso
+```bash
+# Windows (PowerShell)
+iwr https://get.tur.so/install.ps1 -useb | iex
 
-### Option 2 : Tout autre hébergeur Node.js
+# macOS/Linux
+curl -sSfL https://get.tur.so/install.sh | bash
 
-Le projet fonctionne avec n'importe quel hébergeur supportant Node.js. La base SQLite locale (`file:./prisma/dev.db`) convient pour un usage mono-utilisateur.
+# Ou via Homebrew
+brew install tursodatabase/tap/turso
+```
+
+**Créer la base et obtenir les credentials** :
+
+```bash
+# Se connecter à Turso
+turso auth login
+
+# Créer une base de données
+turso db create care-assistant
+
+# Obtenir l'URL de connexion
+turso db show care-assistant --url
+# Exemple de sortie : libsql://care-assistant-xxx.turso.io
+
+# Créer un token d'authentification
+turso db tokens create care-assistant
+# Copier le token généré
+```
+
+#### 2. Pousser le schéma Prisma vers Turso
+
+```bash
+# Configurer les variables d'environnement localement (temporaire)
+$env:DATABASE_URL="libsql://care-assistant-xxx.turso.io"  # Windows PowerShell
+$env:DATABASE_AUTH_TOKEN="votre-token"                     # Windows PowerShell
+
+# Ou sur macOS/Linux :
+# export DATABASE_URL="libsql://care-assistant-xxx.turso.io"
+# export DATABASE_AUTH_TOKEN="votre-token"
+
+# Pousser le schéma (créer les tables)
+npx prisma db push
+```
+
+#### 3. Déployer sur Vercel
+
+1. **Connecter le repo GitHub à Vercel** (si pas déjà fait)
+   - Aller sur [vercel.com](https://vercel.com)
+   - Importer le repo GitHub `care-assistant`
+
+2. **Configurer les variables d'environnement dans Vercel** :
+   - Aller dans **Settings** → **Environment Variables**
+   - Ajouter :
+     - `DATABASE_URL` : `libsql://care-assistant-xxx.turso.io`
+     - `DATABASE_AUTH_TOKEN` : votre token Turso
+   - Ces variables doivent être configurées pour **Production**, **Preview**, et **Development**
+
+3. **Redéployer** :
+   - Aller dans **Deployments**
+   - Cliquer sur les 3 points du dernier déploiement → **Redeploy**
+   - Ou simplement faire un `git push` (déploiement automatique)
+
+#### Note importante
+
+Le code fonctionne automatiquement avec :
+- **SQLite fichier local** en développement (si `DATABASE_AUTH_TOKEN` n'est pas défini)
+- **Turso (LibSQL)** en production (si `DATABASE_AUTH_TOKEN` est défini)
 
 ## Structure du projet
 

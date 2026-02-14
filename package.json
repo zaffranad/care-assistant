@@ -13,7 +13,8 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.4.0",
+    "@libsql/client": "^0.17.0",
+    "@prisma/adapter-libsql": "^7.4.0",
     "@prisma/client": "^7.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
