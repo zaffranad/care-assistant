@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Symptom {
+  id         String   @id @default(cuid())
+  name       String
+  intensity  Int      // 1 à 10
+  notes      String?
+  occurredAt DateTime // date/heure du symptôme (saisie ou passée)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([occurredAt])
+  @@index([name])
+}
