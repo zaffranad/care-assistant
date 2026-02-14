@@ -16,6 +16,7 @@ import { ExportButton } from "@/components/export-button";
 import { Clock, TrendingUp, Filter } from "lucide-react";
 import { subDays, format } from "date-fns";
 import type { SymptomResponse } from "@/lib/types";
+import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
 
@@ -41,9 +42,15 @@ export default function ReportingPage() {
       if (res.ok) {
         const data = await res.json();
         setSymptoms(data);
+      } else {
+        toast.error("Impossible de charger les données", {
+          description: "Une erreur est survenue lors du chargement des symptômes.",
+        });
       }
     } catch (error) {
-      console.error("Erreur lors du chargement:", error);
+      toast.error("Erreur de connexion", {
+        description: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
+      });
     } finally {
       setLoading(false);
     }

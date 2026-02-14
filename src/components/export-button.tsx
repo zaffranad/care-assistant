@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { format } from "date-fns";
 import type { SymptomResponse } from "@/lib/types";
+import { toast } from "sonner";
 
 interface ExportButtonProps {
   symptoms: SymptomResponse[];
@@ -53,11 +54,25 @@ function exportJSON(symptoms: SymptomResponse[]) {
 
 export function ExportButton({ symptoms, format: fmt }: ExportButtonProps) {
   const handleExport = () => {
-    if (symptoms.length === 0) return;
-    if (fmt === "csv") {
-      exportCSV(symptoms);
-    } else {
-      exportJSON(symptoms);
+    if (symptoms.length === 0) {
+      toast.error("Aucune donnée à exporter", {
+        description: "Il n'y a aucun symptôme sur cette période.",
+      });
+      return;
+    }
+    
+    try {
+      if (fmt === "csv") {
+        exportCSV(symptoms);
+        toast.success("Fichier CSV exporté avec succès");
+      } else {
+        exportJSON(symptoms);
+        toast.success("Fichier JSON exporté avec succès");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de l'export", {
+        description: "Une erreur est survenue lors de la génération du fichier.",
+      });
     }
   };
 

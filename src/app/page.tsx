@@ -5,6 +5,7 @@ import { SymptomForm } from "@/components/symptom-form";
 import { SymptomList } from "@/components/symptom-list";
 import { formatFullDate, getTodayDateString } from "@/lib/date-utils";
 import type { SymptomResponse } from "@/lib/types";
+import { toast } from "sonner";
 
 export default function SaisiePage() {
   const [symptoms, setSymptoms] = useState<SymptomResponse[]>([]);
@@ -18,9 +19,15 @@ export default function SaisiePage() {
       if (res.ok) {
         const data = await res.json();
         setSymptoms(data);
+      } else {
+        toast.error("Impossible de charger les symptômes", {
+          description: "Une erreur est survenue lors du chargement.",
+        });
       }
     } catch (error) {
-      console.error("Erreur lors du chargement:", error);
+      toast.error("Erreur de connexion", {
+        description: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
+      });
     } finally {
       setLoading(false);
     }
@@ -35,9 +42,17 @@ export default function SaisiePage() {
       const res = await fetch(`/api/symptoms/${id}`, { method: "DELETE" });
       if (res.ok) {
         setSymptoms((prev) => prev.filter((s) => s.id !== id));
+        toast.success("Symptôme supprimé");
+      } else {
+        const error = await res.json().catch(() => ({ error: "Erreur inconnue" }));
+        toast.error("Impossible de supprimer le symptôme", {
+          description: error.error || "Veuillez réessayer.",
+        });
       }
     } catch (error) {
-      console.error("Erreur lors de la suppression:", error);
+      toast.error("Erreur de connexion", {
+        description: "Impossible de contacter le serveur.",
+      });
     }
   };
 

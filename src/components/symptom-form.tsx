@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ClipboardPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateForInput, formatTimeForInput, getIntensityBgClass } from "@/lib/date-utils";
+import { toast } from "sonner";
 
 interface SymptomFormProps {
   onSubmit: () => void;
@@ -44,10 +45,18 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
         const newNow = new Date();
         setDate(formatDateForInput(newNow));
         setTime(formatTimeForInput(newNow));
+        toast.success("Symptôme enregistré avec succès");
         onSubmit();
+      } else {
+        const error = await res.json().catch(() => ({ error: "Erreur inconnue" }));
+        toast.error("Impossible d'enregistrer le symptôme", {
+          description: error.error || "Veuillez réessayer dans quelques instants.",
+        });
       }
     } catch (error) {
-      console.error("Erreur lors de l'enregistrement:", error);
+      toast.error("Erreur de connexion", {
+        description: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
+      });
     } finally {
       setIsSubmitting(false);
     }

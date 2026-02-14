@@ -7,6 +7,7 @@ import { Trash2, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
 import type { SymptomResponse } from "@/lib/types";
+import { toast } from "sonner";
 
 interface SymptomListProps {
   symptoms: SymptomResponse[];

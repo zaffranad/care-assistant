@@ -5,25 +5,20 @@ import { usePathname } from "next/navigation";
 import { Activity, ClipboardPlus, BarChart3, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 export function NavBar() {
   const pathname = usePathname();
-  const [isDark, setIsDark] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    }
+    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   const navItems = [
@@ -66,7 +61,7 @@ export function NavBar() {
             className="ml-2"
             aria-label="Changer le thème"
           >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {mounted && (theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
           </Button>
         </nav>
       </div>
