@@ -14,3 +14,9 @@ export interface SymptomResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PredefinedSymptomResponse {
+  id: string;
+  name: string;
+  createdAt: string;
+}

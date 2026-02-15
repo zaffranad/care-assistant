@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ClipboardPlus, BarChart3, Moon, Sun } from "lucide-react";
+import { Activity, ClipboardPlus, BarChart3, Settings, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -24,6 +24,7 @@ export function NavBar() {
   const navItems = [
     { href: "/", label: "Saisie", icon: ClipboardPlus },
     { href: "/reporting", label: "Reporting", icon: BarChart3 },
+    { href: "/settings", label: "Paramètres", icon: Settings },
   ];
 
   return (

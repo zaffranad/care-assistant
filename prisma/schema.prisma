@@ -19,3 +19,9 @@ model Symptom {
   @@index([occurredAt])
   @@index([name])
 }
+
+model PredefinedSymptom {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}

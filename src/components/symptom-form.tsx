@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { ClipboardPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateForInput, formatTimeForInput, getIntensityBgClass } from "@/lib/date-utils";
 import { toast } from "sonner";
+import type { PredefinedSymptomResponse } from "@/lib/types";
 
 interface SymptomFormProps {
   onSubmit: () => void;
@@ -23,6 +24,23 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
   const [date, setDate] = useState(formatDateForInput(now));
   const [time, setTime] = useState(formatTimeForInput(now));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [predefined, setPredefined] = useState<PredefinedSymptomResponse[]>([]);
+
+  const fetchPredefined = useCallback(async () => {
+    try {
+      const res = await fetch("/api/predefined-symptoms");
+      if (res.ok) {
+        const data = await res.json();
+        setPredefined(data);
+      }
+    } catch {
+      // Silencieux : on peut saisir manuellement si la liste ne charge pas
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPredefined();
+  }, [fetchPredefined]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,9 +90,35 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nom */}
+          {/* Sélection rapide depuis les symptômes prédéfinis */}
+          {predefined.length > 0 && (
+            <div className="space-y-2">
+              <Label>Sélection rapide</Label>
+              <div className="flex flex-wrap gap-2">
+                {predefined.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setName(s.name)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-sm font-medium transition-all border",
+                      name === s.name
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-muted text-muted-foreground border-transparent hover:border-primary/30 hover:bg-accent"
+                    )}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nom (saisie libre ou rempli par la sélection rapide) */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nom du symptôme</Label>
+            <Label htmlFor="name">
+              {predefined.length > 0 ? "Ou saisir un nom" : "Nom du symptôme"}
+            </Label>
             <Input
               id="name"
               placeholder="Ex : Migraine, Fatigue, Nausée..."
