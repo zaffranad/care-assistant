@@ -20,3 +20,24 @@ export interface PredefinedSymptomResponse {
   name: string;
   createdAt: string;
 }
+
+export interface MedicationResponse {
+  id: string;
+  name: string;
+  dosage: number;
+  time: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MedicationLogResponse {
+  id: string;
+  medicationId: string;
+  medication?: MedicationResponse;
+  takenAt: string;
+  scheduledAt: string;
+  deltaMinutes: number;
+  date: string;
+  createdAt: string;
+}

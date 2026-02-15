@@ -15,50 +15,59 @@ import { IntensityChart } from "@/components/intensity-chart";
 import { ExportButton } from "@/components/export-button";
 import { Clock, TrendingUp, Filter } from "lucide-react";
 import { subDays, format } from "date-fns";
-import type { SymptomResponse } from "@/lib/types";
+import type { SymptomResponse, MedicationLogResponse } from "@/lib/types";
 import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
 
 export default function ReportingPage() {
   const [symptoms, setSymptoms] = useState<SymptomResponse[]>([]);
+  const [medLogs, setMedLogs] = useState<MedicationLogResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodFilter>("7");
   const [nameFilter, setNameFilter] = useState<string>("all");
 
-  const fetchSymptoms = useCallback(async () => {
+  const getDateRange = useCallback(() => {
+    if (period === "all") return { from: undefined, to: undefined };
+    const days = parseInt(period);
+    return {
+      from: format(subDays(new Date(), days), "yyyy-MM-dd"),
+      to: format(new Date(), "yyyy-MM-dd"),
+    };
+  }, [period]);
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      let url = "/api/symptoms";
+      const { from, to } = getDateRange();
+      const dateParams = from && to ? `?from=${from}&to=${to}` : "";
 
-      if (period !== "all") {
-        const days = parseInt(period);
-        const from = format(subDays(new Date(), days), "yyyy-MM-dd");
-        const to = format(new Date(), "yyyy-MM-dd");
-        url += `?from=${from}&to=${to}`;
+      const [sympRes, medRes] = await Promise.all([
+        fetch(`/api/symptoms${dateParams}`),
+        fetch(`/api/medication-logs${dateParams}`),
+      ]);
+
+      if (sympRes.ok) {
+        setSymptoms(await sympRes.json());
+      } else {
+        toast.error("Impossible de charger les symptômes");
       }
 
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setSymptoms(data);
-      } else {
-        toast.error("Impossible de charger les données", {
-          description: "Une erreur est survenue lors du chargement des symptômes.",
-        });
+      if (medRes.ok) {
+        setMedLogs(await medRes.json());
       }
     } catch (error) {
       toast.error("Erreur de connexion", {
-        description: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
+        description: "Impossible de contacter le serveur.",
       });
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [getDateRange]);
 
   useEffect(() => {
-    fetchSymptoms();
-  }, [fetchSymptoms]);
+    fetchData();
+  }, [fetchData]);
 
   // Get unique symptom names for filter
   const symptomNames = useMemo(
@@ -73,6 +82,12 @@ export default function ReportingPage() {
         ? symptoms
         : symptoms.filter((s) => s.name === nameFilter),
     [symptoms, nameFilter]
+  );
+
+  // Medication logs are always shown (no name filter for now)
+  const filteredMedLogs = useMemo(
+    () => (nameFilter === "all" ? medLogs : []),
+    [medLogs, nameFilter]
   );
 
   return (
@@ -104,7 +119,7 @@ export default function ReportingPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les symptômes</SelectItem>
+                <SelectItem value="all">Tous les événements</SelectItem>
                 {symptomNames.map((name) => (
                   <SelectItem key={name} value={name}>
                     {name}
@@ -131,7 +146,7 @@ export default function ReportingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Timeline symptoms={filteredSymptoms} />
+              <Timeline symptoms={filteredSymptoms} medicationLogs={filteredMedLogs} />
             </CardContent>
           </Card>
 

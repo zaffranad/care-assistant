@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { SymptomForm } from "@/components/symptom-form";
 import { SymptomList } from "@/components/symptom-list";
+import { MedicationTracker } from "@/components/medication-tracker";
 import { formatFullDate, getTodayDateString } from "@/lib/date-utils";
 import type { SymptomResponse } from "@/lib/types";
 import { toast } from "sonner";
@@ -62,6 +63,9 @@ export default function SaisiePage() {
       <h1 className="text-2xl sm:text-3xl font-bold capitalize text-center">
         {formatFullDate(today)}
       </h1>
+
+      {/* Suivi médicaments */}
+      <MedicationTracker />
 
       {/* Formulaire */}
       <SymptomForm onSubmit={fetchTodaySymptoms} />
