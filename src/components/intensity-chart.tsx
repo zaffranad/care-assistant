@@ -27,7 +27,7 @@ const CHART_COLORS = [
   "oklch(0.70 0.15 40)",
 ];
 
-type MedStatus = "onTime" | "late" | "missed" | "none";
+type MedStatus = "onTime" | "early" | "late" | "missed" | "none";
 
 interface MedEvent {
   name: string;
@@ -53,14 +53,16 @@ type ChartDataPoint = {
 // Okabe-Ito palette — safe for all types of color blindness
 const STATUS_COLOR: Record<MedStatus, string> = {
   onTime: "#0072B2",  // blue
+  early: "#009E73",   // green
   late: "#E69F00",    // orange/amber
   missed: "#D55E00",  // vermillion
   none: "transparent",
 };
 
 const STATUS_LABEL: Record<Exclude<MedStatus, "none">, string> = {
-  onTime: "À l'heure",
-  late: "En retard",
+  onTime: "À l'heure (±3h)",
+  early: "En avance (>3h)",
+  late: "En retard (>3h)",
   missed: "Oublié",
 };
 
@@ -68,6 +70,7 @@ function dominantStatus(events: MedEvent[]): MedStatus {
   if (events.length === 0) return "none";
   if (events.some((e) => e.status === "missed")) return "missed";
   if (events.some((e) => e.status === "late")) return "late";
+  if (events.some((e) => e.status === "early")) return "early";
   return "onTime";
 }
 
@@ -175,7 +178,9 @@ export function IntensityChart({
     const dateKey = log.date;
     if (!medEventMap[dateKey]) medEventMap[dateKey] = [];
     const status: Exclude<MedStatus, "none"> =
-      Math.abs(log.deltaMinutes) <= 30 ? "onTime" : "late";
+      log.deltaMinutes > 180 ? "late" :
+      log.deltaMinutes < -180 ? "early" :
+      "onTime";
     medEventMap[dateKey].push({
       name: log.medication?.name ?? "Médicament",
       status,
@@ -217,7 +222,7 @@ export function IntensityChart({
       {hasMedData && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium">Médicaments :</span>
-          {(["onTime", "late", "missed"] as Exclude<MedStatus, "none">[]).map(
+          {(["onTime", "early", "late", "missed"] as Exclude<MedStatus, "none">[]).map(
             (status) => (
               <span key={status} className="flex items-center gap-1.5">
                 <span
@@ -269,7 +274,7 @@ export function IntensityChart({
                       ? 0
                       : entry._medStatus === "missed"
                         ? 0.35
-                        : 0.15
+                        : 0.20
                   }
                 />
               ))}
