@@ -250,13 +250,7 @@ export function IntensityChart({
             className="text-muted-foreground"
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend
-            payload={symptomNames.map((name, idx) => ({
-              value: name,
-              type: "line",
-              color: CHART_COLORS[idx % CHART_COLORS.length],
-            }))}
-          />
+          <Legend />
 
           {/* Background bars: full height (10), colored per med status */}
           {hasMedData && (
