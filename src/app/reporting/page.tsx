@@ -207,7 +207,11 @@ export default function ReportingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <IntensityChart symptoms={filteredSymptoms} />
+              <IntensityChart
+                symptoms={filteredSymptoms}
+                medicationLogs={filteredMedLogs}
+                missedMedications={missedEntries}
+              />
             </CardContent>
           </Card>
 
