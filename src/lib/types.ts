@@ -41,3 +41,10 @@ export interface MedicationLogResponse {
   date: string;
   createdAt: string;
 }
+
+export interface MissedMedicationEntry {
+  medicationId: string;
+  medication: MedicationResponse;
+  date: string; // "YYYY-MM-DD"
+  scheduledTime: string; // "HH:mm"
+}

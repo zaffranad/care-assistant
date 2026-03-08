@@ -3,20 +3,22 @@
 import { cn } from "@/lib/utils";
 import { formatShortDate, formatTime, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
 import { Pill } from "lucide-react";
-import type { SymptomResponse, MedicationLogResponse } from "@/lib/types";
+import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry } from "@/lib/types";
 
 interface TimelineProps {
   symptoms: SymptomResponse[];
   medicationLogs?: MedicationLogResponse[];
+  missedMedications?: MissedMedicationEntry[];
 }
 
 type TimelineEvent = {
   id: string;
-  type: "symptom" | "medication";
+  type: "symptom" | "medication" | "missed";
   date: string; // YYYY-MM-DD
   time: Date;
   symptom?: SymptomResponse;
   medLog?: MedicationLogResponse;
+  missedMed?: MissedMedicationEntry;
 };
 
 interface GroupedEvents {
@@ -27,7 +29,8 @@ interface GroupedEvents {
 
 function buildEvents(
   symptoms: SymptomResponse[],
-  medLogs: MedicationLogResponse[]
+  medLogs: MedicationLogResponse[],
+  missedMeds: MissedMedicationEntry[]
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
 
@@ -48,6 +51,18 @@ function buildEvents(
       date: l.date,
       time: new Date(l.takenAt),
       medLog: l,
+    });
+  }
+
+  for (const m of missedMeds) {
+    const t = new Date(`${m.date}T${m.scheduledTime}:00`);
+    if (isNaN(t.getTime())) continue;
+    events.push({
+      id: `missed-${m.medicationId}-${m.date}`,
+      type: "missed",
+      date: m.date,
+      time: t,
+      missedMed: m,
     });
   }
 
@@ -84,8 +99,8 @@ function formatDelta(delta: number): string {
   return `${prefix}${m}min`;
 }
 
-export function Timeline({ symptoms, medicationLogs = [] }: TimelineProps) {
-  const events = buildEvents(symptoms, medicationLogs);
+export function Timeline({ symptoms, medicationLogs = [], missedMedications = [] }: TimelineProps) {
+  const events = buildEvents(symptoms, medicationLogs, missedMedications);
   const grouped = groupByDate(events);
 
   if (events.length === 0) {
@@ -164,6 +179,30 @@ export function Timeline({ symptoms, medicationLogs = [] }: TimelineProps) {
                       </span>
                       <span className="text-xs text-muted-foreground ml-auto">
                         {formatTime(event.medLog.takenAt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : event.type === "missed" && event.missedMed ? (
+                <div
+                  key={event.id}
+                  className="relative flex items-start gap-3 opacity-70"
+                >
+                  <div className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 border-background bg-red-500" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Pill className="h-3.5 w-3.5 text-red-500" />
+                      <span className="font-medium line-through text-muted-foreground">
+                        {event.missedMed.medication.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {event.missedMed.medication.dosage} mg
+                      </span>
+                      <span className="text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 font-medium px-1.5 py-0.5 rounded">
+                        Oublié
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        prévu {event.missedMed.scheduledTime}
                       </span>
                     </div>
                   </div>

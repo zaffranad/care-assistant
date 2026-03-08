@@ -14,8 +14,8 @@ import { Timeline } from "@/components/timeline";
 import { IntensityChart } from "@/components/intensity-chart";
 import { ExportButton } from "@/components/export-button";
 import { Clock, TrendingUp, Filter } from "lucide-react";
-import { subDays, format } from "date-fns";
-import type { SymptomResponse, MedicationLogResponse } from "@/lib/types";
+import { subDays, format, eachDayOfInterval, parseISO } from "date-fns";
+import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry } from "@/lib/types";
 import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
@@ -23,6 +23,7 @@ type PeriodFilter = "7" | "30" | "90" | "all";
 export default function ReportingPage() {
   const [symptoms, setSymptoms] = useState<SymptomResponse[]>([]);
   const [medLogs, setMedLogs] = useState<MedicationLogResponse[]>([]);
+  const [medications, setMedications] = useState<MedicationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodFilter>("7");
   const [nameFilter, setNameFilter] = useState<string>("all");
@@ -42,9 +43,10 @@ export default function ReportingPage() {
       const { from, to } = getDateRange();
       const dateParams = from && to ? `?from=${from}&to=${to}` : "";
 
-      const [sympRes, medRes] = await Promise.all([
+      const [sympRes, medRes, medsRes] = await Promise.all([
         fetch(`/api/symptoms${dateParams}`),
         fetch(`/api/medication-logs${dateParams}`),
+        fetch(`/api/medications?all=true`),
       ]);
 
       if (sympRes.ok) {
@@ -55,6 +57,10 @@ export default function ReportingPage() {
 
       if (medRes.ok) {
         setMedLogs(await medRes.json());
+      }
+
+      if (medsRes.ok) {
+        setMedications(await medsRes.json());
       }
     } catch (error) {
       toast.error("Erreur de connexion", {
@@ -89,6 +95,48 @@ export default function ReportingPage() {
     () => (nameFilter === "all" ? medLogs : []),
     [medLogs, nameFilter]
   );
+
+  // Compute missed medication entries: medications with no log in the date range
+  const missedEntries = useMemo((): MissedMedicationEntry[] => {
+    if (nameFilter !== "all" || medications.length === 0) return [];
+
+    const { from, to } = getDateRange();
+    const today = format(new Date(), "yyyy-MM-dd");
+    const startDate = from ?? (
+      medications.reduce((min, m) => {
+        const d = m.createdAt.split("T")[0];
+        return d < min ? d : min;
+      }, today)
+    );
+    const endDate = to ?? today;
+
+    if (startDate > endDate) return [];
+
+    const days = eachDayOfInterval({
+      start: parseISO(startDate),
+      end: parseISO(endDate),
+    });
+
+    const loggedSet = new Set(medLogs.map((l) => `${l.medicationId}|${l.date}`));
+
+    const missed: MissedMedicationEntry[] = [];
+    for (const day of days) {
+      const dateStr = format(day, "yyyy-MM-dd");
+      for (const med of medications) {
+        const medCreatedDate = med.createdAt.split("T")[0];
+        if (medCreatedDate > dateStr) continue;
+        if (!loggedSet.has(`${med.id}|${dateStr}`)) {
+          missed.push({
+            medicationId: med.id,
+            medication: med,
+            date: dateStr,
+            scheduledTime: med.time,
+          });
+        }
+      }
+    }
+    return missed;
+  }, [medications, medLogs, getDateRange, nameFilter]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -146,7 +194,7 @@ export default function ReportingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Timeline symptoms={filteredSymptoms} medicationLogs={filteredMedLogs} />
+              <Timeline symptoms={filteredSymptoms} medicationLogs={filteredMedLogs} missedMedications={missedEntries} />
             </CardContent>
           </Card>
 
