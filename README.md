@@ -121,18 +121,13 @@ npx prisma db push
    - Ajouter :
      - `DATABASE_URL` : `libsql://care-assistant-xxx.turso.io`
      - `DATABASE_AUTH_TOKEN` : votre token Turso
+     - `VAPID_PUBLIC_KEY` : votre clé publique VAPID
+     - `VAPID_PRIVATE_KEY` : votre clé privée VAPID
+     - `CRON_SECRET` : votre secret cron
    - Ces variables doivent être configurées pour **Production**, **Preview**, et **Development**
 
 3. **Redéployer** :
-   - Aller dans **Deployments**
-   - Cliquer sur les 3 points du dernier déploiement → **Redeploy**
-   - Ou simplement faire un `git push` (déploiement automatique)
-
-#### Note importante
-
-Le code fonctionne automatiquement avec :
-- **SQLite fichier local** en développement (si `DATABASE_AUTH_TOKEN` n'est pas défini)
-- **Turso (LibSQL)** en production (si `DATABASE_AUTH_TOKEN` est défini)
+   - Faire un `git push` (déploiement automatique)
 
 ## Structure du projet
 
@@ -167,8 +162,6 @@ src/
 ## Évolutions possibles
 
 - Authentification (NextAuth) pour multi-utilisateurs
-- PWA pour usage mobile offline
-- Notifications / rappels de saisie
 - Catégories de symptômes personnalisables
 - Corrélations entre symptômes
 - Export PDF pour partage avec un médecin

@@ -17,6 +17,8 @@ import {
   ListRestart,
   Pill,
   Clock,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { PredefinedSymptomResponse, MedicationResponse } from "@/lib/types";
@@ -34,6 +36,12 @@ export default function SettingsPage() {
   const [medTime, setMedTime] = useState("08:00");
   const [addingMed, setAddingMed] = useState(false);
   const [loadingMeds, setLoadingMeds] = useState(true);
+
+  // Edit medication state
+  const [editingMedId, setEditingMedId] = useState<string | null>(null);
+  const [editDosage, setEditDosage] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [savingMed, setSavingMed] = useState(false);
 
   const fetchPredefined = useCallback(async () => {
     try {
@@ -200,6 +208,46 @@ export default function SettingsPage() {
       }
     } catch {
       toast.error("Erreur de connexion");
+    }
+  };
+
+  const handleStartEditMed = (med: MedicationResponse) => {
+    setEditingMedId(med.id);
+    setEditDosage(String(med.dosage));
+    setEditTime(med.time);
+  };
+
+  const handleCancelEditMed = () => {
+    setEditingMedId(null);
+    setEditDosage("");
+    setEditTime("");
+  };
+
+  const handleSaveEditMed = async (med: MedicationResponse) => {
+    if (!editDosage || !editTime) return;
+    setSavingMed(true);
+    try {
+      const res = await fetch(`/api/medications/${med.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dosage: Number(editDosage),
+          time: editTime,
+        }),
+      });
+      if (res.ok) {
+        toast.success(`"${med.name}" mis à jour`, {
+          description: "L'historique des prises n'est pas modifié.",
+        });
+        setEditingMedId(null);
+        fetchMedications();
+      } else {
+        toast.error("Impossible de modifier le médicament");
+      }
+    } catch {
+      toast.error("Erreur de connexion");
+    } finally {
+      setSavingMed(false);
     }
   };
 
@@ -380,52 +428,116 @@ export default function SettingsPage() {
               {medications.map((med) => (
                 <div
                   key={med.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                  className={`rounded-lg border transition-colors ${
                     med.active
                       ? "bg-muted/50 border-border"
                       : "bg-muted/20 border-border/50 opacity-60"
                   }`}
                 >
-                  <Pill className="h-4 w-4 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{med.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {med.dosage} mg
-                      </Badge>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {med.time}
-                      </span>
-                      {!med.active && (
-                        <Badge variant="secondary" className="text-xs">
-                          Inactif
-                        </Badge>
-                      )}
+                  {/* Vue normale */}
+                  {editingMedId !== med.id ? (
+                    <div className="flex items-center gap-3 p-3">
+                      <Pill className="h-4 w-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{med.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {med.dosage} mg
+                          </Badge>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {med.time}
+                          </span>
+                          {!med.active && (
+                            <Badge variant="secondary" className="text-xs">
+                              Inactif
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleStartEditMed(med)}
+                        title="Modifier"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleMed(med)}
+                        className="text-xs"
+                      >
+                        {med.active ? "Désactiver" : "Réactiver"}
+                      </Button>
+                      <ConfirmDialog
+                        title={`Supprimer "${med.name}" ?`}
+                        description="Le médicament et tout son historique de prises seront définitivement supprimés."
+                        confirmLabel="Supprimer"
+                        onConfirm={() => handleDeleteMed(med.id, med.name)}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </ConfirmDialog>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleMed(med)}
-                    className="text-xs"
-                  >
-                    {med.active ? "Désactiver" : "Réactiver"}
-                  </Button>
-                  <ConfirmDialog
-                    title={`Supprimer "${med.name}" ?`}
-                    description="Le médicament et tout son historique de prises seront définitivement supprimés."
-                    confirmLabel="Supprimer"
-                    onConfirm={() => handleDeleteMed(med.id, med.name)}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </ConfirmDialog>
+                  ) : (
+                    /* Formulaire d'édition inline */
+                    <div className="p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Pill className="h-4 w-4 text-primary shrink-0" />
+                        <span className="font-medium">{med.name}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Posologie (mg)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={editDosage}
+                            onChange={(e) => setEditDosage(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Heure de prise</Label>
+                          <Input
+                            type="time"
+                            value={editTime}
+                            onChange={(e) => setEditTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        La modification n&apos;affecte pas l&apos;historique des prises déjà enregistrées.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="gap-1"
+                          disabled={savingMed || !editDosage || !editTime}
+                          onClick={() => handleSaveEditMed(med)}
+                        >
+                          <Check className="h-4 w-4" />
+                          Enregistrer
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancelEditMed}
+                          disabled={savingMed}
+                        >
+                          Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

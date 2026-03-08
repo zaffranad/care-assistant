@@ -4,20 +4,18 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Pill,
-  Check,
   Clock,
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getTodayDateString } from "@/lib/date-utils";
@@ -28,21 +26,8 @@ type MedStatus = "pending" | "upcoming" | "due" | "overdue" | "taken";
 interface MedWithStatus extends MedicationResponse {
   status: MedStatus;
   log?: MedicationLogResponse;
-  minutesUntil: number; // minutes avant/après l'heure prévue
+  minutesUntil: number;
 }
-
-const DELTA_OPTIONS = [
-  { value: "0", label: "À l'heure" },
-  { value: "-120", label: "−2h (en avance)" },
-  { value: "-60", label: "−1h" },
-  { value: "-30", label: "−30min" },
-  { value: "-15", label: "−15min" },
-  { value: "15", label: "+15min (en retard)" },
-  { value: "30", label: "+30min" },
-  { value: "60", label: "+1h" },
-  { value: "120", label: "+2h" },
-  { value: "180", label: "+3h" },
-];
 
 function getTimeMinutes(timeStr: string): number {
   const [h, m] = timeStr.split(":").map(Number);
@@ -54,59 +39,20 @@ function getCurrentMinutes(): number {
   return now.getHours() * 60 + now.getMinutes();
 }
 
-function getMedStatus(med: MedicationResponse, log?: MedicationLogResponse): { status: MedStatus; minutesUntil: number } {
-  if (log) {
-    return { status: "taken", minutesUntil: 0 };
-  }
+function getMedStatus(
+  med: MedicationResponse,
+  log?: MedicationLogResponse
+): { status: MedStatus; minutesUntil: number } {
+  if (log) return { status: "taken", minutesUntil: 0 };
 
   const currentMin = getCurrentMinutes();
   const schedMin = getTimeMinutes(med.time);
-  const diff = schedMin - currentMin; // positif = dans le futur
+  const diff = schedMin - currentMin;
 
   if (diff > 60) return { status: "pending", minutesUntil: diff };
   if (diff > 0) return { status: "upcoming", minutesUntil: diff };
   if (diff > -30) return { status: "due", minutesUntil: diff };
   return { status: "overdue", minutesUntil: diff };
-}
-
-function StatusIndicator({ status }: { status: MedStatus }) {
-  switch (status) {
-    case "taken":
-      return (
-        <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-          <CheckCircle2 className="h-5 w-5" />
-          <span className="text-xs font-medium">Pris</span>
-        </div>
-      );
-    case "due":
-      return (
-        <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400 animate-pulse">
-          <AlertCircle className="h-5 w-5" />
-          <span className="text-xs font-medium">À prendre</span>
-        </div>
-      );
-    case "overdue":
-      return (
-        <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
-          <AlertCircle className="h-5 w-5" />
-          <span className="text-xs font-medium">En retard</span>
-        </div>
-      );
-    case "upcoming":
-      return (
-        <div className="flex items-center gap-1.5 text-yellow-600 dark:text-yellow-400">
-          <Clock className="h-5 w-5" />
-          <span className="text-xs font-medium">Bientôt</span>
-        </div>
-      );
-    default:
-      return (
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Clock className="h-5 w-5" />
-          <span className="text-xs font-medium">Plus tard</span>
-        </div>
-      );
-  }
 }
 
 function formatDelta(delta: number): string {
@@ -120,12 +66,52 @@ function formatDelta(delta: number): string {
   return `${prefix}${m}min`;
 }
 
+function StatusBadge({ status }: { status: MedStatus }) {
+  switch (status) {
+    case "taken":
+      return (
+        <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+          <CheckCircle2 className="h-4 w-4" />
+          <span className="text-xs font-medium">Pris</span>
+        </div>
+      );
+    case "due":
+      return (
+        <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400 animate-pulse">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-xs font-medium">À prendre</span>
+        </div>
+      );
+    case "overdue":
+      return (
+        <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-xs font-medium">En retard</span>
+        </div>
+      );
+    case "upcoming":
+      return (
+        <div className="flex items-center gap-1.5 text-yellow-600 dark:text-yellow-400">
+          <Clock className="h-4 w-4" />
+          <span className="text-xs font-medium">Bientôt</span>
+        </div>
+      );
+    default:
+      return (
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Clock className="h-4 w-4" />
+          <span className="text-xs font-medium">Plus tard</span>
+        </div>
+      );
+  }
+}
+
 export function MedicationTracker() {
   const [meds, setMeds] = useState<MedWithStatus[]>([]);
-  const [logs, setLogs] = useState<MedicationLogResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDeltas, setSelectedDeltas] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
+  const [showCustomTime, setShowCustomTime] = useState<Record<string, boolean>>({});
+  const [customTimes, setCustomTimes] = useState<Record<string, string>>({});
 
   const today = getTodayDateString();
 
@@ -139,7 +125,6 @@ export function MedicationTracker() {
       if (medsRes.ok && logsRes.ok) {
         const medsData: MedicationResponse[] = await medsRes.json();
         const logsData: MedicationLogResponse[] = await logsRes.json();
-        setLogs(logsData);
 
         const medsWithStatus: MedWithStatus[] = medsData.map((med) => {
           const log = logsData.find((l) => l.medicationId === med.id);
@@ -147,16 +132,10 @@ export function MedicationTracker() {
           return { ...med, status, log, minutesUntil };
         });
 
-        // Trier : due/overdue en premier, puis upcoming, puis pending, puis taken
         const order: Record<MedStatus, number> = {
-          due: 0,
-          overdue: 1,
-          upcoming: 2,
-          pending: 3,
-          taken: 4,
+          due: 0, overdue: 1, upcoming: 2, pending: 3, taken: 4,
         };
         medsWithStatus.sort((a, b) => order[a.status] - order[b.status]);
-
         setMeds(medsWithStatus);
       }
     } catch {
@@ -168,36 +147,32 @@ export function MedicationTracker() {
 
   useEffect(() => {
     fetchData();
-    // Rafraîchir le statut toutes les minutes
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const handleConfirm = async (medId: string) => {
+  const submitConfirmation = async (
+    medId: string,
+    delta: number,
+    date: string,
+    name: string,
+    takenLabel: string
+  ) => {
     setSubmitting((prev) => ({ ...prev, [medId]: true }));
     try {
-      const delta = Number(selectedDeltas[medId] || "0");
       const res = await fetch("/api/medication-logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          medicationId: medId,
-          date: today,
-          deltaMinutes: delta,
-        }),
+        body: JSON.stringify({ medicationId: medId, date, deltaMinutes: delta }),
       });
 
       if (res.ok) {
-        const med = meds.find((m) => m.id === medId);
-        toast.success(`Prise de "${med?.name}" confirmée`, {
-          description: delta === 0 ? "À l'heure" : formatDelta(delta),
-        });
+        toast.success(`Prise de "${name}" confirmée`, { description: takenLabel });
+        setShowCustomTime((prev) => ({ ...prev, [medId]: false }));
         fetchData();
       } else {
         const error = await res.json().catch(() => ({ error: "Erreur inconnue" }));
-        toast.error("Impossible de confirmer la prise", {
-          description: error.error,
-        });
+        toast.error("Impossible de confirmer la prise", { description: error.error });
       }
     } catch {
       toast.error("Erreur de connexion");
@@ -206,17 +181,48 @@ export function MedicationTracker() {
     }
   };
 
-  if (loading) {
-    return null;
-  }
+  // Confirme la prise à l'instant présent
+  const handleConfirmNow = (med: MedWithStatus) => {
+    const now = new Date();
+    const dateStr = format(now, "yyyy-MM-dd");
+    const scheduledAt = new Date(`${dateStr}T${med.time}:00`);
+    const delta = Math.round((now.getTime() - scheduledAt.getTime()) / 60_000);
+    const label = delta === 0 ? "À l'heure" : formatDelta(delta);
+    submitConfirmation(med.id, delta, dateStr, med.name, label);
+  };
 
-  if (meds.length === 0) {
-    return null;
-  }
+  // Confirme la prise à une date/heure choisie
+  const handleConfirmCustom = (med: MedWithStatus) => {
+    const raw = customTimes[med.id];
+    if (!raw) return;
+    const takenAt = new Date(raw);
+    if (isNaN(takenAt.getTime())) return;
+    const dateStr = format(takenAt, "yyyy-MM-dd");
+    const scheduledAt = new Date(`${dateStr}T${med.time}:00`);
+    const delta = Math.round((takenAt.getTime() - scheduledAt.getTime()) / 60_000);
+    const label = `${format(takenAt, "dd/MM à HH:mm", { locale: fr })} (${formatDelta(delta)})`;
+    submitConfirmation(med.id, delta, dateStr, med.name, label);
+  };
+
+  const toggleCustomTime = (medId: string) => {
+    setShowCustomTime((prev) => {
+      const next = !prev[medId];
+      if (next && !customTimes[medId]) {
+        // Pré-remplir avec l'heure actuelle
+        setCustomTimes((ct) => ({
+          ...ct,
+          [medId]: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        }));
+      }
+      return { ...prev, [medId]: next };
+    });
+  };
+
+  if (loading || meds.length === 0) return null;
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Pill className="h-5 w-5 text-primary" />
           Médicaments du jour
@@ -230,16 +236,20 @@ export function MedicationTracker() {
           <div
             key={med.id}
             className={cn(
-              "p-3 rounded-lg border transition-all",
-              med.status === "taken" && "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900",
-              med.status === "due" && "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900",
-              med.status === "overdue" && "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900",
-              med.status === "upcoming" && "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900",
+              "rounded-lg border transition-all",
+              med.status === "taken" &&
+                "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900",
+              med.status === "due" &&
+                "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900",
+              med.status === "overdue" &&
+                "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900",
+              med.status === "upcoming" &&
+                "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900",
               med.status === "pending" && "bg-muted/30 border-border"
             )}
           >
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Infos médicament */}
+            {/* En-tête de la carte médicament */}
+            <div className="flex items-center gap-3 p-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">{med.name}</span>
@@ -251,44 +261,74 @@ export function MedicationTracker() {
                   </span>
                 </div>
               </div>
-
-              {/* Statut */}
-              <StatusIndicator status={med.status} />
+              <StatusBadge status={med.status} />
             </div>
 
-            {/* Actions selon le statut */}
+            {/* Confirmation de prise */}
             {med.status === "taken" && med.log ? (
-              <p className="text-xs text-muted-foreground mt-2">
-                Pris {formatDelta(med.log.deltaMinutes)}
-              </p>
+              <div className="px-3 pb-3 text-xs text-muted-foreground">
+                Pris le{" "}
+                {format(new Date(med.log.takenAt), "dd/MM à HH:mm", { locale: fr })}{" "}
+                <span className="font-medium">({formatDelta(med.log.deltaMinutes)})</span>
+              </div>
             ) : (
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <Select
-                  value={selectedDeltas[med.id] || "0"}
-                  onValueChange={(v) =>
-                    setSelectedDeltas((prev) => ({ ...prev, [med.id]: v }))
-                  }
-                >
-                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELTA_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="px-3 pb-3 space-y-2">
+                {/* Bouton principal */}
                 <Button
-                  size="sm"
-                  className="gap-1.5 h-8"
-                  onClick={() => handleConfirm(med.id)}
+                  className="w-full gap-2"
+                  onClick={() => handleConfirmNow(med)}
                   disabled={submitting[med.id]}
                 >
-                  <Check className="h-3.5 w-3.5" />
-                  {submitting[med.id] ? "..." : "Confirmer la prise"}
+                  <CheckCircle2 className="h-4 w-4" />
+                  {submitting[med.id] ? "Enregistrement…" : "Je viens de prendre"}
                 </Button>
+
+                {/* Toggle "Préciser l'heure" */}
+                <button
+                  type="button"
+                  onClick={() => toggleCustomTime(med.id)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showCustomTime[med.id] ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                  Préciser la date et l&apos;heure de prise
+                </button>
+
+                {/* Panneau de saisie d'heure personnalisée */}
+                {showCustomTime[med.id] && (
+                  <div className="space-y-2 pt-1 border-t border-border/50">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        Date et heure de prise
+                      </Label>
+                      <Input
+                        type="datetime-local"
+                        value={customTimes[med.id] || ""}
+                        max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                        onChange={(e) =>
+                          setCustomTimes((prev) => ({
+                            ...prev,
+                            [med.id]: e.target.value,
+                          }))
+                        }
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => handleConfirmCustom(med)}
+                      disabled={submitting[med.id] || !customTimes[med.id]}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {submitting[med.id] ? "Enregistrement…" : "Confirmer à cette heure"}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
