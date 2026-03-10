@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { ClipboardPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDateForInput, formatTimeForInput, getIntensityBgClass } from "@/lib/date-utils";
+import { formatDateForInput, formatTimeForInput } from "@/lib/date-utils";
 import { toast } from "sonner";
 import type { PredefinedSymptomResponse } from "@/lib/types";
 
@@ -25,6 +26,7 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
   const [time, setTime] = useState(formatTimeForInput(now));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [predefined, setPredefined] = useState<PredefinedSymptomResponse[]>([]);
+  const [showCustomNameInput, setShowCustomNameInput] = useState(false);
 
   const fetchPredefined = useCallback(async () => {
     try {
@@ -63,6 +65,7 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
         const newNow = new Date();
         setDate(formatDateForInput(newNow));
         setTime(formatTimeForInput(newNow));
+        setShowCustomNameInput(false);
         toast.success("Symptôme enregistré avec succès");
         onSubmit();
       } else {
@@ -82,26 +85,26 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <ClipboardPlus className="h-5 w-5 text-primary" />
           Nouveau symptôme
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="pt-0">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* Sélection rapide depuis les symptômes prédéfinis */}
           {predefined.length > 0 && (
-            <div className="space-y-2">
-              <Label>Sélection rapide</Label>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Sélection rapide</Label>
+              <div className="flex flex-wrap gap-1.5">
                 {predefined.map((s) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => setName(s.name)}
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-sm font-medium transition-all border",
+                      "px-2.5 py-1 rounded-full text-xs font-medium transition-all border",
                       name === s.name
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "bg-muted text-muted-foreground border-transparent hover:border-primary/30 hover:bg-accent"
@@ -110,49 +113,88 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
                     {s.name}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setShowCustomNameInput((prev) => !prev)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium transition-all border",
+                    showCustomNameInput
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-muted text-muted-foreground border-transparent hover:border-primary/30 hover:bg-accent"
+                  )}
+                >
+                  + Nouveau symptôme
+                </button>
               </div>
             </div>
           )}
 
           {/* Nom (saisie libre ou rempli par la sélection rapide) */}
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              {predefined.length > 0 ? "Ou saisir un nom" : "Nom du symptôme"}
-            </Label>
-            <Input
-              id="name"
-              placeholder="Ex : Migraine, Fatigue, Nausée..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
+          {(predefined.length === 0 || showCustomNameInput) && (
+            <div className="space-y-1.5">
+              <Label htmlFor="name">
+                {predefined.length > 0 ? "Nouveau nom de symptôme" : "Nom du symptôme"}
+              </Label>
+              <Input
+                id="name"
+                placeholder="Ex : Migraine, Fatigue, Nausée..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required={predefined.length === 0}
+              />
+            </div>
+          )}
 
-          {/* Intensité */}
-          <div className="space-y-2">
-            <Label>Intensité : <span className="font-bold">{intensity}/10</span></Label>
-            <div className="flex gap-1.5 flex-wrap">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setIntensity(val)}
-                  className={cn(
-                    "w-9 h-9 rounded-md text-sm font-medium transition-all",
-                    "border-2 hover:scale-110",
-                    intensity === val
-                      ? cn(getIntensityBgClass(val), "text-white border-transparent shadow-md")
-                      : "bg-muted text-muted-foreground border-transparent hover:border-primary/30"
-                  )}
-                >
-                  {val}
-                </button>
-              ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Intensité */}
+            <div className="space-y-1.5">
+              <Label className="flex items-center justify-between gap-2">
+                Intensité
+                <span className="font-semibold text-primary">{intensity}/10</span>
+              </Label>
+              <div className="space-y-1.5 pt-1">
+                <Slider
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={[intensity]}
+                  onValueChange={(value) => setIntensity(value[0] ?? 5)}
+                  aria-label="Intensité du symptôme"
+                />
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>Faible (1)</span>
+                  <span>Forte (10)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Date et Heure */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="time">Heure</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  required
+                />
+              </div>
             </div>
           </div>
 
           {/* Notes */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="notes">Notes (optionnel)</Label>
             <Textarea
               id="notes"
@@ -160,34 +202,11 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
+              className="min-h-16"
             />
           </div>
 
-          {/* Date et Heure */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Heure</Label>
-              <Input
-                id="time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isSubmitting || !name.trim()}>
+          <Button type="submit" className="w-full h-9" disabled={isSubmitting || !name.trim()}>
             {isSubmitting ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </form>
