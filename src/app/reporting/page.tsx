@@ -11,10 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Timeline } from "@/components/timeline";
+import { TimelineWeekPicker } from "@/components/timeline-week-picker";
 import { IntensityChart } from "@/components/intensity-chart";
 import { ExportButton } from "@/components/export-button";
 import { Clock, TrendingUp, Filter } from "lucide-react";
-import { subDays, format, eachDayOfInterval, parseISO } from "date-fns";
+import { subDays, format, eachDayOfInterval, parseISO, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
 import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -24,9 +25,17 @@ export default function ReportingPage() {
   const [symptoms, setSymptoms] = useState<SymptomResponse[]>([]);
   const [medLogs, setMedLogs] = useState<MedicationLogResponse[]>([]);
   const [medications, setMedications] = useState<MedicationResponse[]>([]);
+  const [timelineSymptoms, setTimelineSymptoms] = useState<SymptomResponse[]>([]);
+  const [timelineMedLogs, setTimelineMedLogs] = useState<MedicationLogResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timelineLoading, setTimelineLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodFilter>("7");
   const [nameFilter, setNameFilter] = useState<string>("all");
+  const [timelineWeekOffset, setTimelineWeekOffset] = useState(0);
+  const currentWeekStart = useMemo(
+    () => startOfWeek(new Date(), { weekStartsOn: 1 }),
+    []
+  );
 
   const getDateRange = useCallback(() => {
     if (period === "all") return { from: undefined, to: undefined };
@@ -71,9 +80,60 @@ export default function ReportingPage() {
     }
   }, [getDateRange]);
 
+  const getTimelineWeekRange = useCallback(() => {
+    const weekStart = addWeeks(currentWeekStart, -timelineWeekOffset);
+    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+    return {
+      from: format(weekStart, "yyyy-MM-dd"),
+      to: format(weekEnd, "yyyy-MM-dd"),
+      label: `${format(weekStart, "dd/MM")} - ${format(weekEnd, "dd/MM")}`,
+    };
+  }, [currentWeekStart, timelineWeekOffset]);
+
+  const timelineWeekRange = useMemo(() => getTimelineWeekRange(), [getTimelineWeekRange]);
+  const selectedTimelineWeekStart = useMemo(
+    () => addWeeks(currentWeekStart, -timelineWeekOffset),
+    [currentWeekStart, timelineWeekOffset]
+  );
+
+  const fetchTimelineData = useCallback(async () => {
+    setTimelineLoading(true);
+    try {
+      const { from, to } = timelineWeekRange;
+      const dateParams = `?from=${from}&to=${to}`;
+
+      const [sympRes, medRes] = await Promise.all([
+        fetch(`/api/symptoms${dateParams}`),
+        fetch(`/api/medication-logs${dateParams}`),
+      ]);
+
+      if (sympRes.ok) {
+        setTimelineSymptoms(await sympRes.json());
+      } else {
+        toast.error("Impossible de charger les symptômes de la timeline");
+      }
+
+      if (medRes.ok) {
+        setTimelineMedLogs(await medRes.json());
+      } else {
+        toast.error("Impossible de charger les prises de la timeline");
+      }
+    } catch {
+      toast.error("Erreur de connexion", {
+        description: "Impossible de charger les données de timeline.",
+      });
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, [timelineWeekRange]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    fetchTimelineData();
+  }, [fetchTimelineData]);
 
   // Get unique symptom names for filter
   const symptomNames = useMemo(
@@ -90,10 +150,23 @@ export default function ReportingPage() {
     [symptoms, nameFilter]
   );
 
+  const filteredTimelineSymptoms = useMemo(
+    () =>
+      nameFilter === "all"
+        ? timelineSymptoms
+        : timelineSymptoms.filter((s) => s.name === nameFilter),
+    [timelineSymptoms, nameFilter]
+  );
+
   // Medication logs are always shown (no name filter for now)
   const filteredMedLogs = useMemo(
     () => (nameFilter === "all" ? medLogs : []),
     [medLogs, nameFilter]
+  );
+
+  const filteredTimelineMedLogs = useMemo(
+    () => (nameFilter === "all" ? timelineMedLogs : []),
+    [timelineMedLogs, nameFilter]
   );
 
   // Compute missed medication entries: medications with no log in the date range
@@ -137,6 +210,41 @@ export default function ReportingPage() {
     }
     return missed;
   }, [medications, medLogs, getDateRange, nameFilter]);
+
+  const timelineMissedEntries = useMemo((): MissedMedicationEntry[] => {
+    if (nameFilter !== "all" || medications.length === 0) return [];
+
+    const { from, to } = timelineWeekRange;
+    const startDate = from;
+    const endDate = to;
+
+    if (startDate > endDate) return [];
+
+    const days = eachDayOfInterval({
+      start: parseISO(startDate),
+      end: parseISO(endDate),
+    });
+
+    const loggedSet = new Set(timelineMedLogs.map((l) => `${l.medicationId}|${l.date}`));
+
+    const missed: MissedMedicationEntry[] = [];
+    for (const day of days) {
+      const dateStr = format(day, "yyyy-MM-dd");
+      for (const med of medications) {
+        const medCreatedDate = med.createdAt.split("T")[0];
+        if (medCreatedDate > dateStr) continue;
+        if (!loggedSet.has(`${med.id}|${dateStr}`)) {
+          missed.push({
+            medicationId: med.id,
+            medication: med,
+            date: dateStr,
+            scheduledTime: med.time,
+          });
+        }
+      }
+    }
+    return missed;
+  }, [medications, timelineMedLogs, timelineWeekRange, nameFilter]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -192,9 +300,53 @@ export default function ReportingPage() {
                 <Clock className="h-5 w-5 text-primary" />
                 Timeline
               </CardTitle>
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTimelineWeekOffset((v) => v + 1)}
+                >
+                  Semaine précédente
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {timelineWeekRange.label}
+                  </span>
+                  <TimelineWeekPicker
+                    selectedWeekStart={selectedTimelineWeekStart}
+                    onWeekSelect={(weekStart) => {
+                      const nextOffset = Math.max(
+                        0,
+                        differenceInCalendarWeeks(currentWeekStart, weekStart, {
+                          weekStartsOn: 1,
+                        })
+                      );
+                      setTimelineWeekOffset(nextOffset);
+                    }}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTimelineWeekOffset((v) => Math.max(0, v - 1))}
+                  disabled={timelineWeekOffset === 0}
+                >
+                  Semaine suivante
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <Timeline symptoms={filteredSymptoms} medicationLogs={filteredMedLogs} missedMedications={missedEntries} />
+              {timelineLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Chargement de la semaine...
+                </div>
+              ) : (
+                <Timeline
+                  symptoms={filteredTimelineSymptoms}
+                  medicationLogs={filteredTimelineMedLogs}
+                  missedMedications={timelineMissedEntries}
+                />
+              )}
             </CardContent>
           </Card>
 
