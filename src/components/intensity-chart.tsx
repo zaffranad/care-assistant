@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { format } from "date-fns";
+import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry } from "@/lib/types";
 
@@ -199,6 +199,27 @@ export function IntensityChart({
 
   for (const dateKey of Object.keys(medEventMap)) {
     if (!dateMap[dateKey]) dateMap[dateKey] = {};
+  }
+
+  const existingDateKeys = Object.keys(dateMap).sort((a, b) => a.localeCompare(b));
+  if (existingDateKeys.length > 0) {
+    const allDays = eachDayOfInterval({
+      start: parseISO(existingDateKeys[0]),
+      end: parseISO(existingDateKeys[existingDateKeys.length - 1]),
+    });
+
+    for (const day of allDays) {
+      const dateKey = format(day, "yyyy-MM-dd");
+      if (!dateMap[dateKey]) dateMap[dateKey] = {};
+    }
+  }
+
+  for (const values of Object.values(dateMap)) {
+    for (const symptomName of symptomNames) {
+      if (values[symptomName] === undefined) {
+        values[symptomName] = 0;
+      }
+    }
   }
 
   const chartData: ChartDataPoint[] = Object.entries(dateMap)
