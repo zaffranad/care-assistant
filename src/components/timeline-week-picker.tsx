@@ -22,9 +22,9 @@ export function TimelineWeekPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <CalendarIcon className="h-4 w-4" />
-          {format(selectedWeekStart, "'Semaine du' dd/MM/yyyy", { locale: fr })}
+        <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3 gap-1.5 text-xs sm:text-sm">
+          <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+          {format(selectedWeekStart, "'Sem.' dd/MM", { locale: fr })}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="center">

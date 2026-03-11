@@ -311,10 +311,7 @@ export default function ReportingPage() {
                   <span className="ml-1 hidden sm:inline">Semaine précédente</span>
                   <span className="ml-1 sm:hidden">Préc.</span>
                 </Button>
-                <div className="flex min-w-0 items-center justify-center gap-1 sm:gap-2">
-                  <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                    {timelineWeekRange.label}
-                  </span>
+                <div className="flex min-w-0 items-center justify-center">
                   <TimelineWeekPicker
                     selectedWeekStart={selectedTimelineWeekStart}
                     onWeekSelect={(weekStart) => {
