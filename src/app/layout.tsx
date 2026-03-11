@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBar } from "@/components/nav-bar";
+import { SwipeNavigator } from "@/components/swipe-navigator";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -37,9 +38,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <NavBar />
-          <main className="container mx-auto px-4 py-6">
-            {children}
-          </main>
+          <SwipeNavigator>
+            <main className="container mx-auto px-4 py-6">
+              {children}
+            </main>
+          </SwipeNavigator>
           <Toaster />
         </ThemeProvider>
       </body>
