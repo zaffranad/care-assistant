@@ -14,7 +14,7 @@ import { Timeline } from "@/components/timeline";
 import { TimelineWeekPicker } from "@/components/timeline-week-picker";
 import { IntensityChart } from "@/components/intensity-chart";
 import { ExportButton } from "@/components/export-button";
-import { Clock, TrendingUp, Filter } from "lucide-react";
+import { Clock, TrendingUp, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { subDays, format, eachDayOfInterval, parseISO, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
 import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry } from "@/lib/types";
 import { toast } from "sonner";
@@ -304,12 +304,15 @@ export default function ReportingPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-8 px-2 sm:px-3 text-xs sm:text-sm shrink-0"
                   onClick={() => setTimelineWeekOffset((v) => v + 1)}
                 >
-                  Semaine précédente
+                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="ml-1 hidden sm:inline">Semaine précédente</span>
+                  <span className="ml-1 sm:hidden">Préc.</span>
                 </Button>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
+                <div className="flex min-w-0 items-center justify-center gap-1 sm:gap-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                     {timelineWeekRange.label}
                   </span>
                   <TimelineWeekPicker
@@ -328,10 +331,13 @@ export default function ReportingPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-8 px-2 sm:px-3 text-xs sm:text-sm shrink-0"
                   onClick={() => setTimelineWeekOffset((v) => Math.max(0, v - 1))}
                   disabled={timelineWeekOffset === 0}
                 >
-                  Semaine suivante
+                  <span className="mr-1 hidden sm:inline">Semaine suivante</span>
+                  <span className="mr-1 sm:hidden">Suiv.</span>
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardHeader>
