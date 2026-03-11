@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/auth";
 
-// DELETE /api/cleanup -- Supprimer tout l'historique (symptômes + prises de médicaments)
+// DELETE /api/cleanup -- Supprimer tout l'historique de l'utilisateur (symptômes + prises de médicaments)
 export async function DELETE() {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const userMedications = await prisma.medication.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+    const medicationIds = userMedications.map((m) => m.id);
+
     const [symptoms, medLogs] = await Promise.all([
-      prisma.symptom.deleteMany(),
-      prisma.medicationLog.deleteMany(),
+      prisma.symptom.deleteMany({ where: { userId } }),
+      prisma.medicationLog.deleteMany({
+        where: { medicationId: { in: medicationIds } },
+      }),
     ]);
 
     const total = symptoms.count + medLogs.count;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/auth";
 
 // PATCH /api/medications/[id] -- Modifier un médicament (active, dosage, time)
 export async function PATCH(
@@ -7,7 +8,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const { id } = await params;
+
+    const existing = await prisma.medication.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
+      return NextResponse.json({ error: "Médicament introuvable" }, { status: 404 });
+    }
+
     const body = await request.json();
 
     const data: { active?: boolean; dosage?: number; time?: string } = {};
@@ -43,11 +55,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const { id } = await params;
 
-    await prisma.medication.delete({
-      where: { id },
-    });
+    const existing = await prisma.medication.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
+      return NextResponse.json({ error: "Médicament introuvable" }, { status: 404 });
+    }
+
+    await prisma.medication.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

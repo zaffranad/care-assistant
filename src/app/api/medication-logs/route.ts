@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/auth";
 
 // GET /api/medication-logs?date=YYYY-MM-DD or ?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    let where = {};
+    let dateFilter: Record<string, unknown> = {};
 
     if (date) {
-      where = { date };
+      dateFilter = { date };
     } else if (from && to) {
-      where = {
+      dateFilter = {
         date: {
           gte: from,
           lte: to,
@@ -23,7 +29,10 @@ export async function GET(request: NextRequest) {
     }
 
     const logs = await prisma.medicationLog.findMany({
-      where,
+      where: {
+        ...dateFilter,
+        medication: { userId },
+      },
       include: { medication: true },
       orderBy: { takenAt: "desc" },
     });
@@ -41,6 +50,11 @@ export async function GET(request: NextRequest) {
 // POST /api/medication-logs -- Enregistrer une prise de médicament
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { medicationId, date, deltaMinutes } = body;
 
@@ -51,25 +65,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer le médicament pour connaître l'heure prévue
     const medication = await prisma.medication.findUnique({
       where: { id: medicationId },
     });
 
-    if (!medication) {
+    if (!medication || medication.userId !== userId) {
       return NextResponse.json(
         { error: "Médicament introuvable" },
         { status: 404 }
       );
     }
 
-    // Calculer l'heure prévue et l'heure réelle
-    const [hours, minutes] = medication.time.split(":").map(Number);
     const scheduledAt = new Date(`${date}T${medication.time}:00`);
     const delta = Number(deltaMinutes) || 0;
     const takenAt = new Date(scheduledAt.getTime() + delta * 60 * 1000);
 
-    // Upsert : si déjà enregistré ce jour, mettre à jour
     const log = await prisma.medicationLog.upsert({
       where: {
         medicationId_date: {

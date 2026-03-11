@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/auth";
 
 // GET /api/medications -- Liste des médicaments (actifs par défaut, ?all=true pour tous)
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const all = searchParams.get("all") === "true";
 
     const medications = await prisma.medication.findMany({
-      where: all ? {} : { active: true },
+      where: all ? { userId } : { userId, active: true },
       orderBy: { time: "asc" },
     });
 
@@ -25,6 +31,11 @@ export async function GET(request: NextRequest) {
 // POST /api/medications -- Ajouter un médicament
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { name, dosage, time } = body;
 
@@ -40,6 +51,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         dosage: Number(dosage),
         time: time.trim(),
+        userId,
       },
     });
 

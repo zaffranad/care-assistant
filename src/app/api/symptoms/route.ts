@@ -1,31 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/auth";
 
 // GET /api/symptoms?date=YYYY-MM-DD or ?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    let where = {};
+    let where: Record<string, unknown> = { userId };
 
     if (date) {
-      // Symptômes d'un jour donné
       const dayStart = new Date(`${date}T00:00:00.000Z`);
       const dayEnd = new Date(`${date}T23:59:59.999Z`);
       where = {
+        userId,
         occurredAt: {
           gte: dayStart,
           lte: dayEnd,
         },
       };
     } else if (from && to) {
-      // Symptômes sur une période
       const fromDate = new Date(`${from}T00:00:00.000Z`);
       const toDate = new Date(`${to}T23:59:59.999Z`);
       where = {
+        userId,
         occurredAt: {
           gte: fromDate,
           lte: toDate,
@@ -51,6 +57,11 @@ export async function GET(request: NextRequest) {
 // POST /api/symptoms
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { name, intensity, notes, occurredAt } = body;
 
@@ -74,6 +85,7 @@ export async function POST(request: NextRequest) {
         intensity: Number(intensity),
         notes: notes?.trim() || null,
         occurredAt: new Date(occurredAt),
+        userId,
       },
     });
 

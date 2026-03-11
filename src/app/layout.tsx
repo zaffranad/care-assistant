@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SessionProvider } from "next-auth/react";
 import { NavBar } from "@/components/nav-bar";
 import { SwipeNavigator } from "@/components/swipe-navigator";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -31,20 +32,22 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <NavBar />
-          <SwipeNavigator>
-            <main className="container mx-auto px-4 py-6">
-              {children}
-            </main>
-          </SwipeNavigator>
-          <Toaster />
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <NavBar />
+            <SwipeNavigator>
+              <main className="container mx-auto px-4 py-6">
+                {children}
+              </main>
+            </SwipeNavigator>
+            <Toaster />
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

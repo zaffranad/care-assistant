@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ClipboardPlus, BarChart3, Settings, Moon, Sun } from "lucide-react";
+import { Activity, ClipboardPlus, BarChart3, Settings, Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export function NavBar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -64,6 +66,27 @@ export function NavBar() {
           >
             {mounted && (theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
           </Button>
+          {session?.user && (
+            <>
+              {session.user.image && (
+                <img
+                  src={session.user.image}
+                  alt={session.user.name ?? "Avatar"}
+                  className="ml-2 h-8 w-8 rounded-full"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                className="ml-1"
+                aria-label="Se déconnecter"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </nav>
       </div>
     </header>
