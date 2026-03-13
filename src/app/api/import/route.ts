@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
           createdAt: new Date(ps.createdAt),
           userId,
         })),
-        skipDuplicates: true,
       });
     }
 
