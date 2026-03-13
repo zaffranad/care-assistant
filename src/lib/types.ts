@@ -48,3 +48,26 @@ export interface MissedMedicationEntry {
   date: string; // "YYYY-MM-DD"
   scheduledTime: string; // "HH:mm"
 }
+
+export interface ExportData {
+  version: 1;
+  exportedAt: string;
+  predefinedSymptoms: Omit<PredefinedSymptomResponse, "id">[];
+  symptoms: Omit<SymptomResponse, "id" | "updatedAt">[];
+  medications: (Omit<MedicationResponse, "id" | "updatedAt"> & {
+    logs: Omit<MedicationLogResponse, "id" | "medicationId" | "medication">[];
+  })[];
+}
+
+export interface ExportMetrics {
+  predefinedSymptoms: number;
+  symptoms: number;
+  medications: number;
+  medicationLogs: number;
+}
+
+export interface ImportResult {
+  success: boolean;
+  imported: ExportMetrics;
+  message: string;
+}

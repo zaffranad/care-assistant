@@ -50,13 +50,23 @@ type ChartDataPoint = {
   [key: string]: unknown;
 };
 
-// Okabe-Ito palette — safe for all types of color blindness
+// Couleurs pour le texte du tooltip (par statut)
 const STATUS_COLOR: Record<MedStatus, string> = {
-  onTime: "#0072B2",  // blue
-  early: "#009E73",   // green
-  late: "#E69F00",    // orange/amber
-  missed: "#D55E00",  // vermillion
+  onTime: "#16a34a",  // green
+  early: "#ca8a04",   // amber
+  late: "#ea580c",    // orange
+  missed: "#dc2626",  // red
   none: "transparent",
+};
+
+// Couleur unique de fond des barres, opacité décroissante selon la gravité
+const STATUS_BG_COLOR = "#dc2626";
+const STATUS_BG_OPACITY: Record<MedStatus, number> = {
+  missed: 0.50,
+  late:   0.20,
+  early:  0.20,
+  onTime: 0,
+  none:   0,
 };
 
 const STATUS_LABEL: Record<Exclude<MedStatus, "none">, string> = {
@@ -243,12 +253,16 @@ export function IntensityChart({
       {hasMedData && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium">Médicaments :</span>
-          {(["onTime", "early", "late", "missed"] as Exclude<MedStatus, "none">[]).map(
+          {(["missed", "late", "early", "onTime"] as Exclude<MedStatus, "none">[]).map(
             (status) => (
               <span key={status} className="flex items-center gap-1.5">
                 <span
-                  className="inline-block w-3 h-3 rounded-sm"
-                  style={{ backgroundColor: STATUS_COLOR[status], opacity: 0.35 }}
+                  className="inline-block w-3 h-3 rounded-sm border border-red-300/40"
+                  style={{
+                    backgroundColor: STATUS_BG_COLOR,
+                    opacity: STATUS_BG_OPACITY[status] === 0 ? 0.08 : STATUS_BG_OPACITY[status],
+                    ...(status === "onTime" ? { outline: "1px solid #d1d5db", backgroundColor: "transparent", opacity: 1 } : {}),
+                  }}
                 />
                 {STATUS_LABEL[status]}
               </span>
@@ -289,14 +303,8 @@ export function IntensityChart({
               {chartData.map((entry) => (
                 <Cell
                   key={entry.date}
-                  fill={STATUS_COLOR[entry._medStatus]}
-                  fillOpacity={
-                    entry._medStatus === "none"
-                      ? 0
-                      : entry._medStatus === "missed"
-                        ? 0.35
-                        : 0.20
-                  }
+                  fill={STATUS_BG_COLOR}
+                  fillOpacity={STATUS_BG_OPACITY[entry._medStatus]}
                 />
               ))}
             </Bar>

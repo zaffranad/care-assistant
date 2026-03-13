@@ -19,9 +19,14 @@ import {
   Clock,
   Pencil,
   Check,
+  Download,
+  Upload,
+  FileDown,
+  FileUp,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { PredefinedSymptomResponse, MedicationResponse } from "@/lib/types";
+import type { PredefinedSymptomResponse, MedicationResponse, ExportData, ExportMetrics, ImportResult } from "@/lib/types";
 
 export default function SettingsPage() {
   const [predefined, setPredefined] = useState<PredefinedSymptomResponse[]>([]);
@@ -42,6 +47,14 @@ export default function SettingsPage() {
   const [editDosage, setEditDosage] = useState("");
   const [editTime, setEditTime] = useState("");
   const [savingMed, setSavingMed] = useState(false);
+
+  // Export/Import state
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [lastExportMetrics, setLastExportMetrics] = useState<ExportMetrics | null>(null);
+  const [lastImportResult, setLastImportResult] = useState<ImportResult | null>(null);
 
   const fetchPredefined = useCallback(async () => {
     try {
@@ -267,6 +280,115 @@ export default function SettingsPage() {
     } catch {
       toast.error("Erreur de connexion");
     }
+  };
+
+  // --- Export / Import ---
+
+  const handleExport = async () => {
+    setExporting(true);
+    setLastExportMetrics(null);
+    try {
+      const res = await fetch("/api/export");
+      if (!res.ok) {
+        toast.error("Impossible d'exporter les données");
+        return;
+      }
+
+      const data: ExportData = await res.json();
+
+      const totalLogs = data.medications.reduce((sum, m) => sum + m.logs.length, 0);
+      setLastExportMetrics({
+        predefinedSymptoms: data.predefinedSymptoms.length,
+        symptoms: data.symptoms.length,
+        medications: data.medications.length,
+        medicationLogs: totalLogs,
+      });
+
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const date = new Date().toISOString().slice(0, 10);
+      a.download = `care-assistant-export-${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Données exportées avec succès");
+    } catch {
+      toast.error("Erreur lors de l'export");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setPendingImportFile(file);
+    setShowImportConfirm(true);
+  };
+
+  const handleConfirmImport = async () => {
+    if (!pendingImportFile) return;
+
+    setShowImportConfirm(false);
+    setImporting(true);
+    setLastImportResult(null);
+    try {
+      const text = await pendingImportFile.text();
+      let data: ExportData;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        toast.error("Fichier invalide", {
+          description: "Le fichier sélectionné n'est pas un JSON valide.",
+        });
+        return;
+      }
+
+      if (data.version !== 1) {
+        toast.error("Format non reconnu", {
+          description: "Ce fichier n'a pas été exporté depuis l'application.",
+        });
+        return;
+      }
+
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erreur inconnue" }));
+        toast.error("Erreur lors de l'import", { description: err.error });
+        return;
+      }
+
+      const result: ImportResult = await res.json();
+      setLastImportResult(result);
+
+      toast.success("Données importées avec succès", {
+        description: result.message,
+      });
+
+      fetchPredefined();
+      fetchMedications();
+    } catch {
+      toast.error("Erreur lors de l'import");
+    } finally {
+      setImporting(false);
+      setPendingImportFile(null);
+    }
+  };
+
+  const handleCancelImport = () => {
+    setShowImportConfirm(false);
+    setPendingImportFile(null);
   };
 
   // --- Nettoyage ---
@@ -545,6 +667,119 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Section : Export / Import */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileDown className="h-5 w-5 text-primary" />
+            Export &amp; Import des données
+          </CardTitle>
+          <CardDescription>
+            Exportez toutes vos données au format JSON ou importez un fichier précédemment exporté.
+            L&apos;import remplace intégralement les données existantes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleExport}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Exporter les données
+            </Button>
+
+            <div className="relative">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleFileSelect}
+                disabled={importing}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                aria-label="Importer un fichier JSON"
+              />
+              <Button
+                variant="outline"
+                className="gap-2 w-full pointer-events-none"
+                disabled={importing}
+              >
+                {importing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Importer des données
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            L&apos;import supprime toutes les données existantes avant de les remplacer par celles du fichier.
+          </p>
+
+          {lastExportMetrics && (
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <FileDown className="h-4 w-4 text-primary" />
+                Dernier export
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Symptômes prédéfinis</span>
+                  <span className="font-medium">{lastExportMetrics.predefinedSymptoms}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Symptômes</span>
+                  <span className="font-medium">{lastExportMetrics.symptoms}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Médicaments</span>
+                  <span className="font-medium">{lastExportMetrics.medications}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Prises de médicament</span>
+                  <span className="font-medium">{lastExportMetrics.medicationLogs}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {lastImportResult && (
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <FileUp className="h-4 w-4 text-primary" />
+                Dernier import
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Symptômes prédéfinis</span>
+                  <span className="font-medium">{lastImportResult.imported.predefinedSymptoms}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Symptômes</span>
+                  <span className="font-medium">{lastImportResult.imported.symptoms}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Médicaments</span>
+                  <span className="font-medium">{lastImportResult.imported.medications}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Prises de médicament</span>
+                  <span className="font-medium">{lastImportResult.imported.medicationLogs}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Separator />
 
       {/* Section : Zone de danger */}
@@ -580,6 +815,35 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {showImportConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={handleCancelImport}
+          />
+          <Card className="relative z-10 w-full max-w-md mx-4">
+            <CardContent className="pt-6 space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Importer des données ?</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Cette action va <strong>supprimer toutes vos données actuelles</strong> (symptômes,
+                  médicaments, historique) et les remplacer par celles du fichier{" "}
+                  <strong>{pendingImportFile?.name}</strong>.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleCancelImport}>
+                  Annuler
+                </Button>
+                <Button variant="destructive" onClick={handleConfirmImport}>
+                  Remplacer mes données
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
