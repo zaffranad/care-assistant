@@ -1,0 +1,53 @@
+---
+description: React component patterns and conventions
+globs: src/components/**/*.tsx
+alwaysApply: false
+---
+
+# React Component Conventions
+
+## Client Components
+
+All feature components use `"use client"` since they manage state and user interactions. Only the root layout is a server component.
+
+## State & Data Fetching
+
+- Use `useState` + `useCallback` + `useEffect` for data fetching (no server components for data)
+- Fetch from internal API routes (`/api/...`) using `fetch()`
+- Wrap fetch callbacks in `useCallback` to avoid re-render loops
+- Use `useMemo` for derived/filtered data
+
+## Toast Notifications
+
+Use Sonner for all user feedback:
+
+```typescript
+import { toast } from "sonner";
+
+toast.success("Symptôme ajouté");
+toast.error("Impossible de charger les données", {
+  description: "Vérifiez votre connexion internet.",
+});
+```
+
+## Existing Components
+
+| Component | Purpose |
+|-----------|---------|
+| `symptom-form.tsx` | Add symptom (name, intensity 1-10, notes, datetime) |
+| `symptom-list.tsx` | Today's symptoms with delete |
+| `medication-tracker.tsx` | Daily medication schedule and take/log |
+| `bowel-movement-tracker.tsx` | Log Bristol-scale (1-7) bowel movements |
+| `timeline.tsx` | Chronological week view of all events |
+| `timeline-week-picker.tsx` | Week navigation for timeline |
+| `intensity-chart.tsx` | Recharts intensity line chart |
+| `bowel-movement-chart.tsx` | Recharts Bristol scale chart |
+| `export-button.tsx` | CSV/JSON export trigger |
+| `confirm-dialog.tsx` | Confirmation modal for destructive actions |
+| `nav-bar.tsx` | Top navigation (Saisie / Reporting / Paramètres) |
+| `swipe-navigator.tsx` | Touch swipe between routes |
+| `theme-provider.tsx` | next-themes wrapper |
+
+## UI Primitives
+
+shadcn/ui components live in `src/components/ui/`. Add new ones via `npx shadcn add <component>`.

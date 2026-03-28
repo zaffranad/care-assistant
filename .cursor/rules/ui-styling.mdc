@@ -1,0 +1,50 @@
+---
+description: UI styling and design system conventions
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# UI & Styling Conventions
+
+## Design System
+
+- **Tailwind CSS v4** (config via CSS, no `tailwind.config.ts`)
+- **shadcn/ui** New York style with neutral base color and CSS variables
+- **Icons**: Lucide React (`lucide-react`)
+- **Theme**: Light/dark via `next-themes` (system default)
+
+## Layout Patterns
+
+- Pages use `max-w-2xl mx-auto` (forms/settings) or `max-w-4xl mx-auto` (reporting)
+- Vertical spacing: `space-y-6` between sections
+- Cards (`Card`, `CardHeader`, `CardContent`) for grouping related content
+- Responsive: mobile-first with `sm:` breakpoints
+
+## Component Utilities
+
+```typescript
+import { cn } from "@/lib/utils"; // clsx + tailwind-merge
+
+<div className={cn("base-classes", conditional && "extra-classes")} />
+```
+
+## Color Semantics
+
+- Intensity colors (symptoms): green (1-3) → yellow (4-5) → orange (6-7) → red (8-10)
+- Use helpers from `@/lib/date-utils`: `getIntensityColor()`, `getIntensityBgClass()`, `getIntensityTextClass()`
+- Destructive actions: `variant="destructive"` or `text-destructive` / `border-destructive`
+
+## Responsive Design
+
+- Touch-friendly: swipe navigation between pages (`SwipeNavigator`)
+- Button sizes adapt: `text-xs sm:text-sm`, `px-2 sm:px-3`
+- Grid layouts: `grid-cols-1 sm:grid-cols-2` or `sm:grid-cols-3`
+- Hide/show elements: `hidden sm:block` / `sm:hidden`
+
+## Adding shadcn Components
+
+```bash
+npx shadcn add <component-name>
+```
+
+Components are installed to `src/components/ui/`.

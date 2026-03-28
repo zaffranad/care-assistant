@@ -1,0 +1,54 @@
+---
+description: Prisma schema and database conventions
+globs: prisma/**
+alwaysApply: false
+---
+
+# Prisma & Database Conventions
+
+## Schema Location
+
+Schema: `prisma/schema.prisma`. Generated client output: `src/generated/prisma/` (never edit manually).
+
+## Provider & Adapter
+
+- Provider: `sqlite`
+- Runtime adapter: `@prisma/adapter-libsql` with `@libsql/client`
+- Dev: local file `file:./prisma/dev.db`
+- Prod: Turso remote (`libsql://...` URL + auth token)
+
+## Data Models
+
+| Model | Key Fields | Purpose |
+|-------|-----------|---------|
+| `User` | id, email, name | App user (NextAuth managed) |
+| `Account` | provider, providerAccountId | OAuth accounts |
+| `Session` | sessionToken, expires | DB sessions (JWT used instead) |
+| `Symptom` | name, intensity (1-10), occurredAt, notes | Symptom entries |
+| `PredefinedSymptom` | name (unique per user) | Saved symptom names for quick entry |
+| `Medication` | name, dosage (mg), time (HH:mm), active | Daily medications |
+| `MedicationLog` | medicationId, date, takenAt, scheduledAt, deltaMinutes | Daily take log (unique per med+date) |
+| `BowelMovement` | bristolType (1-7), occurredAt, notes | Bristol scale entries |
+
+## Conventions
+
+- All domain models have `userId` FK with `onDelete: Cascade`
+- IDs: `@id @default(cuid())`
+- Timestamps: `createdAt @default(now())`, `updatedAt @updatedAt` where applicable
+- Indexes on `userId`, `occurredAt`, `date`, `name` for query performance
+- `MedicationLog` has `@@unique([medicationId, date])` for one log per med per day
+
+## Migrations
+
+Use `npx prisma migrate dev --name <description>` for schema changes. For production Turso, use manual SQL scripts in `scripts/` (SQLite limitations with ALTER TABLE).
+
+## Client Usage
+
+```typescript
+import { prisma } from "@/lib/prisma";
+
+const symptoms = await prisma.symptom.findMany({
+  where: { userId, occurredAt: { gte: startDate, lte: endDate } },
+  orderBy: { occurredAt: "desc" },
+});
+```

@@ -1,0 +1,31 @@
+---
+description: TypeScript type conventions and shared types
+globs: src/lib/types.ts
+alwaysApply: false
+---
+
+# TypeScript Type Conventions
+
+## Shared Types Location
+
+All shared types live in `src/lib/types.ts`. Import as `import type { ... } from "@/lib/types"`.
+
+## Naming Conventions
+
+- `*FormData` — data sent from client to API (e.g., `SymptomFormData`)
+- `*Response` — data returned from API to client (e.g., `SymptomResponse`)
+- `ExportData` — full export payload (versioned, `version: 1`)
+- `ImportResult` — import operation result with counts
+
+## Adding New Types
+
+When adding a new feature/model:
+
+1. Create `*FormData` interface for the creation payload
+2. Create `*Response` interface matching the API JSON output
+3. Add the new data to `ExportData` (optional field for backward compat)
+4. Update `ExportMetrics` with the count field
+
+## Date Handling
+
+All dates in types are ISO strings (`string`), not `Date` objects. Conversion happens at the API boundary and in display components using `date-fns`.

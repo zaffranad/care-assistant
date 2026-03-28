@@ -1,0 +1,56 @@
+---
+description: API route handler conventions for Next.js App Router
+globs: src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# API Route Conventions
+
+## Authentication Pattern
+
+Every data route must authenticate the user first:
+
+```typescript
+import { getAuthenticatedUserId } from "@/lib/auth";
+
+export async function GET() {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  // ... query scoped to userId
+}
+```
+
+## Data Scoping
+
+All Prisma queries MUST include `where: { userId }` to scope data to the authenticated user. Never expose cross-user data.
+
+## Query Patterns
+
+- **List by date**: Accept `?date=YYYY-MM-DD` for single day, or `?from=YYYY-MM-DD&to=YYYY-MM-DD` for ranges
+- **Date filtering**: Use `gte`/`lte` with `T00:00:00.000Z` / `T23:59:59.999Z` suffixes on `occurredAt` fields
+- **Include all**: Some routes accept `?all=true` to include inactive records (e.g., medications)
+
+## Response Format
+
+- Success: return data directly as JSON
+- Error: `{ error: "Message en français" }` with appropriate HTTP status
+- Error messages are in French for user-facing display
+
+## Existing Routes
+
+| Route | Methods | Purpose |
+|-------|---------|---------|
+| `/api/symptoms` | GET, POST | List/create symptoms |
+| `/api/symptoms/[id]` | DELETE | Delete symptom |
+| `/api/predefined-symptoms` | GET, POST, DELETE | Manage predefined symptom names |
+| `/api/predefined-symptoms/[id]` | DELETE | Delete one predefined symptom |
+| `/api/medications` | GET, POST | List/create medications |
+| `/api/medications/[id]` | PATCH, DELETE | Update/delete medication |
+| `/api/medication-logs` | GET, POST | List/upsert daily medication logs |
+| `/api/bowel-movements` | GET, POST | List/create bowel movements |
+| `/api/bowel-movements/[id]` | DELETE | Delete bowel movement |
+| `/api/export` | GET | Full JSON export |
+| `/api/import` | POST | Full JSON import (replaces all data) |
+| `/api/cleanup` | DELETE | Delete all history (keeps config) |

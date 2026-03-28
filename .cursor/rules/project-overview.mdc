@@ -1,0 +1,63 @@
+---
+description: Care Assistant project overview - architecture, conventions, and context
+alwaysApply: true
+---
+
+# Care Assistant - Project Context
+
+Medical symptom tracking web app (French UI) with daily logging, reporting, and data visualization.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript 5
+- **Database**: SQLite via Prisma 7 ORM + LibSQL adapter (local file dev, Turso in production)
+- **Auth**: NextAuth v5 (beta) with Google provider, JWT session strategy
+- **UI**: Tailwind CSS v4 + shadcn/ui (New York style) + Radix UI + Lucide icons
+- **Charts**: Recharts 3
+- **Dates**: date-fns with French locale (`fr`)
+- **Toasts**: Sonner
+
+## Project Structure
+
+```
+src/app/           → Pages (App Router) and API route handlers
+src/components/    → Feature components + ui/ (shadcn primitives)
+src/lib/           → auth.ts, prisma.ts, types.ts, date-utils.ts, utils.ts
+src/generated/     → Prisma client (auto-generated, never edit)
+prisma/            → schema.prisma, migrations/
+scripts/           → DB init and production migration helpers
+```
+
+## Key Conventions
+
+- All UI text is in **French**
+- Path alias: `@/*` maps to `./src/*`
+- All data routes require authentication via `getAuthenticatedUserId()` from `@/lib/auth`
+- Prisma client singleton in `@/lib/prisma` (dev: hot-reload safe via `globalThis`)
+- Dates stored as ISO strings, displayed with `date-fns` French locale
+- IDs use `cuid()` (Prisma default)
+- Environment: `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`
+
+## Documentation Maintenance (MANDATORY)
+
+After every code change, check if documentation needs updating. Apply updates **in the same response** as the code change.
+
+### What triggers an update
+
+| Change type | Files to update |
+|---|---|
+| New/modified API route | `api-routes.mdc` (route table) + `README.md` (API table) |
+| New/modified component | `react-components.mdc` (component table) + `README.md` (architecture tree) |
+| Prisma schema change | `prisma-database.mdc` (model table) + `README.md` (data model + architecture) |
+| New shared type | `typescript-types.mdc` |
+| New env variable | This file (environment list) + `README.md` (env section) |
+| New dependency or version bump | This file (tech stack) + `README.md` (stack table) |
+| New page or route | `README.md` (architecture tree) |
+| New script | `README.md` (scripts table) |
+| UI pattern change | `ui-styling.mdc` |
+
+### Rules
+
+- Keep all doc files concise: update existing entries, don't duplicate
+- If a feature is removed, remove it from docs too
+- Never skip doc updates — they are part of the task, not a follow-up
