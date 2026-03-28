@@ -3,22 +3,24 @@
 import { cn } from "@/lib/utils";
 import { formatShortDate, formatTime, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
 import { Pill } from "lucide-react";
-import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry } from "@/lib/types";
+import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry, BowelMovementResponse } from "@/lib/types";
 
 interface TimelineProps {
   symptoms: SymptomResponse[];
   medicationLogs?: MedicationLogResponse[];
   missedMedications?: MissedMedicationEntry[];
+  bowelMovements?: BowelMovementResponse[];
 }
 
 type TimelineEvent = {
   id: string;
-  type: "symptom" | "medication" | "missed";
+  type: "symptom" | "medication" | "missed" | "bowel";
   date: string; // YYYY-MM-DD
   time: Date;
   symptom?: SymptomResponse;
   medLog?: MedicationLogResponse;
   missedMed?: MissedMedicationEntry;
+  bowelMovement?: BowelMovementResponse;
 };
 
 interface GroupedEvents {
@@ -27,10 +29,21 @@ interface GroupedEvents {
   items: TimelineEvent[];
 }
 
+const BRISTOL_LABELS: Record<number, string> = {
+  1: "Billes dures séparées",
+  2: "En saucisse, grumeleuse",
+  3: "En saucisse, fissurée",
+  4: "Lisse et souple",
+  5: "Morceaux mous",
+  6: "Floconneuse, pâteuse",
+  7: "Liquide, sans morceaux",
+};
+
 function buildEvents(
   symptoms: SymptomResponse[],
   medLogs: MedicationLogResponse[],
-  missedMeds: MissedMedicationEntry[]
+  missedMeds: MissedMedicationEntry[],
+  bowelMovements: BowelMovementResponse[]
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
 
@@ -63,6 +76,16 @@ function buildEvents(
       date: m.date,
       time: t,
       missedMed: m,
+    });
+  }
+
+  for (const bm of bowelMovements) {
+    events.push({
+      id: bm.id,
+      type: "bowel",
+      date: new Date(bm.occurredAt).toISOString().split("T")[0],
+      time: new Date(bm.occurredAt),
+      bowelMovement: bm,
     });
   }
 
@@ -99,8 +122,8 @@ function formatDelta(delta: number): string {
   return `${prefix}${m}min`;
 }
 
-export function Timeline({ symptoms, medicationLogs = [], missedMedications = [] }: TimelineProps) {
-  const events = buildEvents(symptoms, medicationLogs, missedMedications);
+export function Timeline({ symptoms, medicationLogs = [], missedMedications = [], bowelMovements = [] }: TimelineProps) {
+  const events = buildEvents(symptoms, medicationLogs, missedMedications, bowelMovements);
   const grouped = groupByDate(events);
 
   if (events.length === 0) {
@@ -205,6 +228,32 @@ export function Timeline({ symptoms, medicationLogs = [], missedMedications = []
                         prévu {event.missedMed.scheduledTime}
                       </span>
                     </div>
+                  </div>
+                </div>
+              ) : event.type === "bowel" && event.bowelMovement ? (
+                <div
+                  key={event.id}
+                  className="relative flex items-start gap-3"
+                >
+                  <div className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 border-background bg-amber-500" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm leading-none">🚽</span>
+                      <span className="font-medium">
+                        Bristol {event.bowelMovement.bristolType}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {BRISTOL_LABELS[event.bowelMovement.bristolType]}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {formatTime(event.bowelMovement.occurredAt)}
+                      </span>
+                    </div>
+                    {event.bowelMovement.notes && (
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                        {event.bowelMovement.notes}
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : null

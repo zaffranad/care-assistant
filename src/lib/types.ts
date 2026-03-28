@@ -49,6 +49,20 @@ export interface MissedMedicationEntry {
   scheduledTime: string; // "HH:mm"
 }
 
+export interface BowelMovementFormData {
+  bristolType: number;
+  notes?: string;
+  occurredAt: string; // ISO string
+}
+
+export interface BowelMovementResponse {
+  id: string;
+  bristolType: number;
+  notes: string | null;
+  occurredAt: string;
+  createdAt: string;
+}
+
 export interface ExportData {
   version: 1;
   exportedAt: string;
@@ -57,6 +71,7 @@ export interface ExportData {
   medications: (Omit<MedicationResponse, "id" | "updatedAt"> & {
     logs: Omit<MedicationLogResponse, "id" | "medicationId" | "medication">[];
   })[];
+  bowelMovements?: Omit<BowelMovementResponse, "id">[];
 }
 
 export interface ExportMetrics {
@@ -64,6 +79,7 @@ export interface ExportMetrics {
   symptoms: number;
   medications: number;
   medicationLogs: number;
+  bowelMovements: number;
 }
 
 export interface ImportResult {

@@ -11,7 +11,8 @@
     "db:init-local": "node scripts/init-local-db.mjs",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "migrate:prod-bowel": "node scripts/migrate-prod-step4.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

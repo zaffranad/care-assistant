@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const [predefinedSymptoms, symptoms, medications] = await Promise.all([
+    const [predefinedSymptoms, symptoms, medications, bowelMovements] = await Promise.all([
       prisma.predefinedSymptom.findMany({
         where: { userId },
         orderBy: { name: "asc" },
@@ -22,6 +22,10 @@ export async function GET() {
       prisma.medication.findMany({
         where: { userId },
         include: { logs: { orderBy: { date: "asc" } } },
+      }),
+      prisma.bowelMovement.findMany({
+        where: { userId },
+        orderBy: { occurredAt: "asc" },
       }),
     ]);
 
@@ -52,6 +56,12 @@ export async function GET() {
           date: l.date,
           createdAt: l.createdAt.toISOString(),
         })),
+      })),
+      bowelMovements: bowelMovements.map((bm) => ({
+        bristolType: bm.bristolType,
+        notes: bm.notes,
+        occurredAt: bm.occurredAt.toISOString(),
+        createdAt: bm.createdAt.toISOString(),
       })),
     };
 

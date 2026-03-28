@@ -21,6 +21,7 @@ model User {
   symptoms           Symptom[]
   medications        Medication[]
   predefinedSymptoms PredefinedSymptom[]
+  bowelMovements     BowelMovement[]
 }
 
 model Account {
@@ -101,6 +102,20 @@ model Medication {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+model BowelMovement {
+  id          String   @id @default(cuid())
+  bristolType Int      // Échelle de Bristol : 1 à 7
+  notes       String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([occurredAt])
   @@index([userId])
 }
 

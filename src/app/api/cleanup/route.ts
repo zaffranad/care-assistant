@@ -16,19 +16,20 @@ export async function DELETE() {
     });
     const medicationIds = userMedications.map((m) => m.id);
 
-    const [symptoms, medLogs] = await Promise.all([
+    const [symptoms, medLogs, bowelMovements] = await Promise.all([
       prisma.symptom.deleteMany({ where: { userId } }),
       prisma.medicationLog.deleteMany({
         where: { medicationId: { in: medicationIds } },
       }),
+      prisma.bowelMovement.deleteMany({ where: { userId } }),
     ]);
 
-    const total = symptoms.count + medLogs.count;
+    const total = symptoms.count + medLogs.count + bowelMovements.count;
 
     return NextResponse.json({
       success: true,
       deleted: total,
-      message: `${symptoms.count} symptôme(s) et ${medLogs.count} prise(s) de médicament supprimés`,
+      message: `${symptoms.count} symptôme(s), ${medLogs.count} prise(s) de médicament et ${bowelMovements.count} selle(s) supprimés`,
     });
   } catch (error) {
     console.error("Error cleaning up:", error);
