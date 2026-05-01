@@ -18,6 +18,7 @@ alwaysApply: false
 - Pages use `max-w-2xl mx-auto` (forms/settings) or `max-w-4xl mx-auto` (reporting)
 - Vertical spacing: `space-y-6` between sections
 - Cards (`Card`, `CardHeader`, `CardContent`) for grouping related content
+- Secondary filter areas can use dashed muted cards with compact buttons/badges to stay visually light
 - Responsive: mobile-first with `sm:` breakpoints
 
 ## Component Utilities

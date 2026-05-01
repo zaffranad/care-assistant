@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Timeline } from "@/components/timeline";
 import { TimelineWeekPicker } from "@/components/timeline-week-picker";
 import { IntensityChart } from "@/components/intensity-chart";
@@ -21,6 +22,13 @@ import type { SymptomResponse, MedicationLogResponse, MedicationResponse, Missed
 import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
+
+const periodOptions: { value: PeriodFilter; label: string }[] = [
+  { value: "7", label: "7 j" },
+  { value: "30", label: "30 j" },
+  { value: "90", label: "90 j" },
+  { value: "all", label: "Tout" },
+];
 
 export default function ReportingPage() {
   const [symptoms, setSymptoms] = useState<SymptomResponse[]>([]);
@@ -79,7 +87,7 @@ export default function ReportingPage() {
       if (bowelRes.ok) {
         setBowelMovements(await bowelRes.json());
       }
-    } catch (error) {
+    } catch {
       toast.error("Erreur de connexion", {
         description: "Impossible de contacter le serveur.",
       });
@@ -276,36 +284,67 @@ export default function ReportingPage() {
       </h1>
 
       {/* Filtres */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            <span className="text-sm font-medium text-muted-foreground">Filtres :</span>
-            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 derniers jours</SelectItem>
-                <SelectItem value="30">30 derniers jours</SelectItem>
-                <SelectItem value="90">90 derniers jours</SelectItem>
-                <SelectItem value="all">Tout l&apos;historique</SelectItem>
-              </SelectContent>
-            </Select>
+      <Card className="border-dashed bg-muted/20 shadow-none">
+        <CardContent className="p-2.5 sm:p-3">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <Filter className="h-3 w-3" />
+                Filtres
+              </span>
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                {period === "all" ? "Tout l'historique" : `${period} derniers jours`}
+              </Badge>
+              {nameFilter !== "all" && (
+                <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                  {nameFilter}
+                </Badge>
+              )}
+              {(period !== "7" || nameFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="h-5 px-1.5 text-[10px] text-muted-foreground"
+                  onClick={() => {
+                    setPeriod("7");
+                    setNameFilter("all");
+                  }}
+                >
+                  Réinitialiser
+                </Button>
+              )}
+            </div>
 
-            <Select value={nameFilter} onValueChange={setNameFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les événements</SelectItem>
-                {symptomNames.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="inline-flex w-full rounded-md border bg-background p-0.5 sm:w-auto">
+                {periodOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={period === option.value ? "secondary" : "ghost"}
+                    size="xs"
+                    className="h-6 flex-1 rounded-sm px-2 text-[11px] sm:flex-none"
+                    onClick={() => setPeriod(option.value)}
+                  >
+                    {option.label}
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+
+              <Select value={nameFilter} onValueChange={setNameFilter}>
+                <SelectTrigger className="h-7 w-full text-[11px] sm:w-[190px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les événements</SelectItem>
+                  {symptomNames.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -316,6 +355,52 @@ export default function ReportingPage() {
         </div>
       ) : (
         <>
+          {/* Graphique d'évolution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Évolution de l&apos;intensité
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <IntensityChart
+                symptoms={filteredSymptoms}
+                medicationLogs={filteredMedLogs}
+                missedMedications={missedEntries}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Graphique transit intestinal */}
+          {filteredBowelMovements.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Transit intestinal
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BowelMovementChart bowelMovements={filteredBowelMovements} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Export */}
+          <div className="flex flex-wrap gap-3 justify-center">
+            <ExportButton
+              symptoms={filteredSymptoms}
+              bowelMovements={filteredBowelMovements}
+              format="csv"
+            />
+            <ExportButton
+              symptoms={filteredSymptoms}
+              bowelMovements={filteredBowelMovements}
+              format="json"
+            />
+          </div>
+
           {/* Timeline */}
           <Card>
             <CardHeader>
@@ -376,52 +461,6 @@ export default function ReportingPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* Graphique d'évolution */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Évolution de l&apos;intensité
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <IntensityChart
-                symptoms={filteredSymptoms}
-                medicationLogs={filteredMedLogs}
-                missedMedications={missedEntries}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Graphique transit intestinal */}
-          {filteredBowelMovements.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Transit intestinal
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BowelMovementChart bowelMovements={filteredBowelMovements} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Export */}
-          <div className="flex flex-wrap gap-3 justify-center">
-            <ExportButton
-              symptoms={filteredSymptoms}
-              bowelMovements={filteredBowelMovements}
-              format="csv"
-            />
-            <ExportButton
-              symptoms={filteredSymptoms}
-              bowelMovements={filteredBowelMovements}
-              format="json"
-            />
-          </div>
         </>
       )}
     </div>

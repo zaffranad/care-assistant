@@ -14,11 +14,11 @@ Application web de suivi quotidien de santé : symptômes, médicaments, transit
 
 ### Reporting & Visualisation
 
-- **Timeline** : vue chronologique par semaine de tous les événements (symptômes, prises de médicaments, transit)
 - **Graphique d'intensité** : courbe d'évolution par symptôme dans le temps (Recharts)
 - **Graphique transit** : évolution de l'échelle de Bristol dans le temps
+- **Timeline** : vue chronologique par semaine de tous les événements (symptômes, prises de médicaments, transit)
 - **Prises manquées** : détection automatique des médicaments non pris
-- **Filtres** : par période (7j, 30j, 90j, tout) et par nom de symptôme
+- **Filtres rapides** : période par boutons (7j, 30j, 90j, tout) et événement par menu compact
 - **Export** : CSV et JSON filtrés par la période sélectionnée
 
 ### Paramètres
