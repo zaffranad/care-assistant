@@ -303,6 +303,7 @@ export default function SettingsPage() {
         medications: data.medications.length,
         medicationLogs: totalLogs,
         bowelMovements: data.bowelMovements?.length ?? 0,
+        significantEvents: data.significantEvents?.length ?? 0,
       });
 
       const json = JSON.stringify(data, null, 2);
@@ -752,6 +753,10 @@ export default function SettingsPage() {
                   <span className="text-muted-foreground">Selles</span>
                   <span className="font-medium">{lastExportMetrics.bowelMovements}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Faits marquants</span>
+                  <span className="font-medium">{lastExportMetrics.significantEvents}</span>
+                </div>
               </div>
             </div>
           )}
@@ -782,6 +787,10 @@ export default function SettingsPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Selles</span>
                   <span className="font-medium">{lastImportResult.imported.bowelMovements}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Faits marquants</span>
+                  <span className="font-medium">{lastImportResult.imported.significantEvents}</span>
                 </div>
               </div>
             </div>

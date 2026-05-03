@@ -51,6 +51,8 @@ All Prisma queries MUST include `where: { userId }` to scope data to the authent
 | `/api/medication-logs` | GET, POST | List/upsert daily medication logs |
 | `/api/bowel-movements` | GET, POST | List/create bowel movements |
 | `/api/bowel-movements/[id]` | DELETE | Delete bowel movement |
+| `/api/significant-events` | GET, POST | List/create significant events |
+| `/api/significant-events/[id]` | DELETE | Delete significant event |
 | `/api/export` | GET | Full JSON export |
 | `/api/import` | POST | Full JSON import (replaces all data) |
 | `/api/cleanup` | DELETE | Delete all history (keeps config) |

@@ -5,6 +5,7 @@ import { SymptomForm } from "@/components/symptom-form";
 import { SymptomList } from "@/components/symptom-list";
 import { MedicationTracker } from "@/components/medication-tracker";
 import { BowelMovementTracker } from "@/components/bowel-movement-tracker";
+import { SignificantEventTracker } from "@/components/significant-event-tracker";
 import { formatFullDate, getTodayDateString } from "@/lib/date-utils";
 import type { SymptomResponse } from "@/lib/types";
 import { toast } from "sonner";
@@ -70,6 +71,9 @@ export default function SaisiePage() {
 
       {/* Transit intestinal */}
       <BowelMovementTracker />
+
+      {/* Faits marquants */}
+      <SignificantEventTracker />
 
       {/* Formulaire */}
       <SymptomForm onSubmit={fetchTodaySymptoms} />

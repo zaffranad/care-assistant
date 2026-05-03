@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getTodayDateString } from "@/lib/date-utils";
+import { formatDateForInput, formatTimeForInput, getTodayDateString } from "@/lib/date-utils";
 import type { BowelMovementResponse } from "@/lib/types";
 
 const BRISTOL_SCALE = [
@@ -59,7 +59,8 @@ export function BowelMovementTracker() {
   const [notes, setNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
   const [useCustomTime, setUseCustomTime] = useState(false);
-  const [customDateTime, setCustomDateTime] = useState("");
+  const [customDate, setCustomDate] = useState("");
+  const [customTime, setCustomTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -103,7 +104,8 @@ export function BowelMovementTracker() {
         setNotes("");
         setShowNotes(false);
         setUseCustomTime(false);
-        setCustomDateTime("");
+        setCustomDate("");
+        setCustomTime("");
         fetchData();
       } else {
         const error = await res.json().catch(() => ({ error: "Erreur inconnue" }));
@@ -119,8 +121,8 @@ export function BowelMovementTracker() {
   const handleSubmitNow = () => submitMovement(new Date().toISOString());
 
   const handleSubmitCustom = () => {
-    if (!customDateTime) return;
-    submitMovement(new Date(customDateTime).toISOString());
+    if (!customDate || !customTime) return;
+    submitMovement(new Date(`${customDate}T${customTime}:00`).toISOString());
   };
 
   const handleDelete = async (id: string) => {
@@ -258,8 +260,10 @@ export function BowelMovementTracker() {
             onClick={() => {
               setUseCustomTime((prev) => {
                 const next = !prev;
-                if (next && !customDateTime) {
-                  setCustomDateTime(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+                if (next && !customDate) {
+                  const now = new Date();
+                  setCustomDate(formatDateForInput(now));
+                  setCustomTime(formatTimeForInput(now));
                 }
                 return next;
               });
@@ -276,24 +280,30 @@ export function BowelMovementTracker() {
 
           {useCustomTime && (
             <div className="space-y-2 pt-1 border-t border-border/50">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  Date et heure
-                </Label>
-                <Input
-                  type="datetime-local"
-                  value={customDateTime}
-                  max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
-                  onChange={(e) => setCustomDateTime(e.target.value)}
-                  className="h-9 text-sm"
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Date</Label>
+                  <Input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Heure</Label>
+                  <Input
+                    type="time"
+                    value={customTime}
+                    onChange={(e) => setCustomTime(e.target.value)}
+                  />
+                </div>
               </div>
               <Button
                 variant="secondary"
                 size="sm"
                 className="w-full gap-2"
                 onClick={handleSubmitCustom}
-                disabled={submitting || !customDateTime}
+                disabled={submitting || !customDate || !customTime}
               >
                 <CheckCircle2 className="h-4 w-4" />
                 {submitting ? "Enregistrement…" : "Confirmer à cette heure"}

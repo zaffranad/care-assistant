@@ -2,25 +2,27 @@
 
 import { cn } from "@/lib/utils";
 import { formatShortDate, formatTime, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
-import { Pill } from "lucide-react";
-import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry, BowelMovementResponse } from "@/lib/types";
+import { Pill, Sparkles } from "lucide-react";
+import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
 
 interface TimelineProps {
   symptoms: SymptomResponse[];
   medicationLogs?: MedicationLogResponse[];
   missedMedications?: MissedMedicationEntry[];
   bowelMovements?: BowelMovementResponse[];
+  significantEvents?: SignificantEventResponse[];
 }
 
 type TimelineEvent = {
   id: string;
-  type: "symptom" | "medication" | "missed" | "bowel";
+  type: "symptom" | "medication" | "missed" | "bowel" | "significant";
   date: string; // YYYY-MM-DD
   time: Date;
   symptom?: SymptomResponse;
   medLog?: MedicationLogResponse;
   missedMed?: MissedMedicationEntry;
   bowelMovement?: BowelMovementResponse;
+  significantEvent?: SignificantEventResponse;
 };
 
 interface GroupedEvents {
@@ -43,7 +45,8 @@ function buildEvents(
   symptoms: SymptomResponse[],
   medLogs: MedicationLogResponse[],
   missedMeds: MissedMedicationEntry[],
-  bowelMovements: BowelMovementResponse[]
+  bowelMovements: BowelMovementResponse[],
+  significantEvents: SignificantEventResponse[]
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
 
@@ -89,6 +92,18 @@ function buildEvents(
     });
   }
 
+  for (const event of significantEvents) {
+    const eventTime = new Date(`${event.date}T${event.time}:00`);
+    if (isNaN(eventTime.getTime())) continue;
+    events.push({
+      id: event.id,
+      type: "significant",
+      date: event.date,
+      time: eventTime,
+      significantEvent: event,
+    });
+  }
+
   return events;
 }
 
@@ -122,8 +137,14 @@ function formatDelta(delta: number): string {
   return `${prefix}${m}min`;
 }
 
-export function Timeline({ symptoms, medicationLogs = [], missedMedications = [], bowelMovements = [] }: TimelineProps) {
-  const events = buildEvents(symptoms, medicationLogs, missedMedications, bowelMovements);
+export function Timeline({
+  symptoms,
+  medicationLogs = [],
+  missedMedications = [],
+  bowelMovements = [],
+  significantEvents = [],
+}: TimelineProps) {
+  const events = buildEvents(symptoms, medicationLogs, missedMedications, bowelMovements, significantEvents);
   const grouped = groupByDate(events);
 
   if (events.length === 0) {
@@ -180,6 +201,25 @@ export function Timeline({ symptoms, medicationLogs = [], missedMedications = []
                         {event.symptom.notes}
                       </p>
                     )}
+                  </div>
+                </div>
+              ) : event.type === "significant" && event.significantEvent ? (
+                <div
+                  key={event.id}
+                  className="relative flex items-start gap-3"
+                >
+                  <div className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 border-background bg-violet-500" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                      <span className="font-medium">Fait marquant</span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {event.significantEvent.time}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {event.significantEvent.text}
+                    </p>
                   </div>
                 </div>
               ) : event.type === "medication" && event.medLog ? (

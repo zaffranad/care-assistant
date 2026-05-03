@@ -38,6 +38,7 @@ toast.error("Impossible de charger les données", {
 | `symptom-list.tsx` | Today's symptoms with delete |
 | `medication-tracker.tsx` | Daily medication schedule and take/log |
 | `bowel-movement-tracker.tsx` | Log Bristol-scale (1-7) bowel movements |
+| `significant-event-tracker.tsx` | Add dated free-text significant events |
 | `timeline.tsx` | Chronological week view of all events |
 | `timeline-week-picker.tsx` | Week navigation for timeline |
 | `intensity-chart.tsx` | Recharts intensity line chart |

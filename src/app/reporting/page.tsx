@@ -18,7 +18,7 @@ import { ExportButton } from "@/components/export-button";
 import { BowelMovementChart } from "@/components/bowel-movement-chart";
 import { Clock, TrendingUp, Filter, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 import { subDays, format, eachDayOfInterval, parseISO, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
-import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry, BowelMovementResponse } from "@/lib/types";
+import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
 import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
@@ -35,9 +35,11 @@ export default function ReportingPage() {
   const [medLogs, setMedLogs] = useState<MedicationLogResponse[]>([]);
   const [medications, setMedications] = useState<MedicationResponse[]>([]);
   const [bowelMovements, setBowelMovements] = useState<BowelMovementResponse[]>([]);
+  const [significantEvents, setSignificantEvents] = useState<SignificantEventResponse[]>([]);
   const [timelineSymptoms, setTimelineSymptoms] = useState<SymptomResponse[]>([]);
   const [timelineMedLogs, setTimelineMedLogs] = useState<MedicationLogResponse[]>([]);
   const [timelineBowelMovements, setTimelineBowelMovements] = useState<BowelMovementResponse[]>([]);
+  const [timelineSignificantEvents, setTimelineSignificantEvents] = useState<SignificantEventResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodFilter>("7");
@@ -63,11 +65,12 @@ export default function ReportingPage() {
       const { from, to } = getDateRange();
       const dateParams = from && to ? `?from=${from}&to=${to}` : "";
 
-      const [sympRes, medRes, medsRes, bowelRes] = await Promise.all([
+      const [sympRes, medRes, medsRes, bowelRes, significantRes] = await Promise.all([
         fetch(`/api/symptoms${dateParams}`),
         fetch(`/api/medication-logs${dateParams}`),
         fetch(`/api/medications?all=true`),
         fetch(`/api/bowel-movements${dateParams}`),
+        fetch(`/api/significant-events${dateParams}`),
       ]);
 
       if (sympRes.ok) {
@@ -86,6 +89,10 @@ export default function ReportingPage() {
 
       if (bowelRes.ok) {
         setBowelMovements(await bowelRes.json());
+      }
+
+      if (significantRes.ok) {
+        setSignificantEvents(await significantRes.json());
       }
     } catch {
       toast.error("Erreur de connexion", {
@@ -118,10 +125,11 @@ export default function ReportingPage() {
       const { from, to } = timelineWeekRange;
       const dateParams = `?from=${from}&to=${to}`;
 
-      const [sympRes, medRes, bowelRes] = await Promise.all([
+      const [sympRes, medRes, bowelRes, significantRes] = await Promise.all([
         fetch(`/api/symptoms${dateParams}`),
         fetch(`/api/medication-logs${dateParams}`),
         fetch(`/api/bowel-movements${dateParams}`),
+        fetch(`/api/significant-events${dateParams}`),
       ]);
 
       if (sympRes.ok) {
@@ -138,6 +146,10 @@ export default function ReportingPage() {
 
       if (bowelRes.ok) {
         setTimelineBowelMovements(await bowelRes.json());
+      }
+
+      if (significantRes.ok) {
+        setTimelineSignificantEvents(await significantRes.json());
       }
     } catch {
       toast.error("Erreur de connexion", {
@@ -198,6 +210,16 @@ export default function ReportingPage() {
   const filteredTimelineBowelMovements = useMemo(
     () => (nameFilter === "all" ? timelineBowelMovements : []),
     [timelineBowelMovements, nameFilter]
+  );
+
+  const filteredSignificantEvents = useMemo(
+    () => (nameFilter === "all" ? significantEvents : []),
+    [significantEvents, nameFilter]
+  );
+
+  const filteredTimelineSignificantEvents = useMemo(
+    () => (nameFilter === "all" ? timelineSignificantEvents : []),
+    [timelineSignificantEvents, nameFilter]
   );
 
   // Compute missed medication entries: medications with no log in the date range
@@ -368,6 +390,7 @@ export default function ReportingPage() {
                 symptoms={filteredSymptoms}
                 medicationLogs={filteredMedLogs}
                 missedMedications={missedEntries}
+                significantEvents={filteredSignificantEvents}
               />
             </CardContent>
           </Card>
@@ -457,6 +480,7 @@ export default function ReportingPage() {
                   medicationLogs={filteredTimelineMedLogs}
                   missedMedications={timelineMissedEntries}
                   bowelMovements={filteredTimelineBowelMovements}
+                  significantEvents={filteredTimelineSignificantEvents}
                 />
               )}
             </CardContent>

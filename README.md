@@ -8,15 +8,16 @@ Application web de suivi quotidien de santé : symptômes, médicaments, transit
 
 - **Suivi de médicaments** : prise quotidienne avec heure prévue vs heure réelle, calcul du décalage
 - **Transit intestinal** : saisie sur l'échelle de Bristol (1-7) avec notes et horodatage
+- **Faits marquants** : texte libre avec date et heure pour noter un événement important
 - **Saisie de symptômes** : nom (prédéfini ou libre), intensité (1-10), notes, date/heure
 - **Horodatage** : automatique à l'heure de saisie, ou date dans le passé au choix
 - **Vue du jour** : date complète en français + liste des symptômes du jour
 
 ### Reporting & Visualisation
 
-- **Graphique d'intensité** : courbe d'évolution par symptôme dans le temps (Recharts)
+- **Graphique d'intensité** : courbe d'évolution par symptôme dans le temps avec marqueurs de faits marquants (Recharts)
 - **Graphique transit** : évolution de l'échelle de Bristol dans le temps
-- **Timeline** : vue chronologique par semaine de tous les événements (symptômes, prises de médicaments, transit)
+- **Timeline** : vue chronologique par semaine de tous les événements (symptômes, prises de médicaments, transit, faits marquants)
 - **Prises manquées** : détection automatique des médicaments non pris
 - **Filtres rapides** : période par boutons (7j, 30j, 90j, tout) et événement par menu compact
 - **Export** : CSV et JSON filtrés par la période sélectionnée
@@ -60,7 +61,7 @@ Application web de suivi quotidien de santé : symptômes, médicaments, transit
 care-assistant/
 ├── .cursor/rules/          # Règles Cursor pour l'IA (vibe coding)
 ├── prisma/
-│   ├── schema.prisma       # Schéma de données (9 modèles)
+│   ├── schema.prisma       # Schéma de données (10 modèles)
 │   ├── migrations/         # Historique des migrations
 │   ├── dev.db              # Base SQLite locale (dev)
 │   └── *.sql               # Scripts SQL utilitaires
@@ -85,6 +86,7 @@ care-assistant/
 │   │       ├── medications/         # CRUD médicaments
 │   │       ├── medication-logs/     # Logs de prise quotidienne
 │   │       ├── bowel-movements/     # CRUD transit intestinal
+│   │       ├── significant-events/  # CRUD faits marquants
 │   │       ├── export/              # Export JSON complet
 │   │       ├── import/              # Import JSON (remplacement)
 │   │       └── cleanup/             # Nettoyage historique
@@ -94,6 +96,7 @@ care-assistant/
 │   │   ├── symptom-list.tsx    # Liste des symptômes du jour
 │   │   ├── medication-tracker.tsx    # Suivi de prise quotidienne
 │   │   ├── bowel-movement-tracker.tsx # Saisie transit (Bristol)
+│   │   ├── significant-event-tracker.tsx # Saisie faits marquants
 │   │   ├── timeline.tsx        # Vue chronologique par semaine
 │   │   ├── timeline-week-picker.tsx  # Navigation semaine
 │   │   ├── intensity-chart.tsx # Graphique d'intensité (Recharts)
@@ -128,7 +131,8 @@ User ──┬── Account (OAuth Google)
        ├── PredefinedSymptom (name, unique par user)
        ├── Medication (name, dosage mg, time HH:mm, active)
        │   └── MedicationLog (date, takenAt, scheduledAt, deltaMinutes)
-       └── BowelMovement (bristolType 1-7, occurredAt, notes)
+       ├── BowelMovement (bristolType 1-7, occurredAt, notes)
+       └── SignificantEvent (text, date, time)
 ```
 
 ## API REST
@@ -145,6 +149,8 @@ User ──┬── Account (OAuth Google)
 | `/api/medication-logs` | GET, POST | Lister / enregistrer une prise (upsert par med+date) |
 | `/api/bowel-movements` | GET, POST | Lister / créer une entrée transit |
 | `/api/bowel-movements/[id]` | DELETE | Supprimer une entrée transit |
+| `/api/significant-events` | GET, POST | Lister / créer un fait marquant |
+| `/api/significant-events/[id]` | DELETE | Supprimer un fait marquant |
 | `/api/export` | GET | Export JSON complet (format versionné v1) |
 | `/api/import` | POST | Import JSON (remplace toutes les données) |
 | `/api/cleanup` | DELETE | Supprimer l'historique (garde config) |
@@ -201,6 +207,7 @@ Générer un `AUTH_SECRET` : `npx auth secret`
 | `npm run db:push` | Pousser le schéma sans migration |
 | `npm run db:studio` | Interface visuelle Prisma Studio |
 | `npm run migrate:prod-bowel` | Migration prod : table BowelMovement |
+| `npm run migrate:prod-significant-events` | Migration prod : table SignificantEvent |
 
 ## Déploiement en production
 

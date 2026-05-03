@@ -29,6 +29,7 @@ Schema: `prisma/schema.prisma`. Generated client output: `src/generated/prisma/`
 | `Medication` | name, dosage (mg), time (HH:mm), active | Daily medications |
 | `MedicationLog` | medicationId, date, takenAt, scheduledAt, deltaMinutes | Daily take log (unique per med+date) |
 | `BowelMovement` | bristolType (1-7), occurredAt, notes | Bristol scale entries |
+| `SignificantEvent` | text, date (YYYY-MM-DD), time (HH:mm) | Free-text dated significant events |
 
 ## Conventions
 

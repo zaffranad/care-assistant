@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       prisma.symptom.deleteMany({ where: { userId } }),
       prisma.predefinedSymptom.deleteMany({ where: { userId } }),
       prisma.bowelMovement.deleteMany({ where: { userId } }),
+      prisma.significantEvent.deleteMany({ where: { userId } }),
     ]);
     await prisma.medication.deleteMany({ where: { userId } });
 
@@ -111,6 +112,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const significantEvents = body.significantEvents ?? [];
+    if (significantEvents.length > 0) {
+      await prisma.significantEvent.createMany({
+        data: significantEvents.map((event: { text: string; date: string; time?: string; createdAt: string }) => ({
+          text: event.text,
+          date: event.date,
+          time: event.time ?? "12:00",
+          createdAt: new Date(event.createdAt),
+          userId,
+        })),
+      });
+    }
+
     const result: ImportResult = {
       success: true,
       imported: {
@@ -119,6 +133,7 @@ export async function POST(request: NextRequest) {
         medications: body.medications.length,
         medicationLogs: totalLogs,
         bowelMovements: bowelMovements.length,
+        significantEvents: significantEvents.length,
       },
       message: [
         `${body.predefinedSymptoms.length} symptôme(s) prédéfini(s)`,
@@ -126,6 +141,7 @@ export async function POST(request: NextRequest) {
         `${body.medications.length} médicament(s)`,
         `${totalLogs} prise(s) de médicament`,
         `${bowelMovements.length} selle(s)`,
+        `${significantEvents.length} fait(s) marquant(s)`,
       ].join(", "),
     };
 

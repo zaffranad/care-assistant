@@ -14,6 +14,7 @@ All shared types live in `src/lib/types.ts`. Import as `import type { ... } from
 
 - `*FormData` — data sent from client to API (e.g., `SymptomFormData`)
 - `*Response` — data returned from API to client (e.g., `SymptomResponse`)
+- `SignificantEvent*` — date/time free-text "fait marquant" payloads and responses
 - `ExportData` — full export payload (versioned, `version: 1`)
 - `ImportResult` — import operation result with counts
 

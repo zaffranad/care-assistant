@@ -63,6 +63,21 @@ export interface BowelMovementResponse {
   createdAt: string;
 }
 
+export interface SignificantEventFormData {
+  text: string;
+  date: string; // "YYYY-MM-DD"
+  time: string; // "HH:mm"
+}
+
+export interface SignificantEventResponse {
+  id: string;
+  text: string;
+  date: string;
+  time: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ExportData {
   version: 1;
   exportedAt: string;
@@ -72,6 +87,7 @@ export interface ExportData {
     logs: Omit<MedicationLogResponse, "id" | "medicationId" | "medication">[];
   })[];
   bowelMovements?: Omit<BowelMovementResponse, "id">[];
+  significantEvents?: Omit<SignificantEventResponse, "id" | "updatedAt">[];
 }
 
 export interface ExportMetrics {
@@ -80,6 +96,7 @@ export interface ExportMetrics {
   medications: number;
   medicationLogs: number;
   bowelMovements: number;
+  significantEvents: number;
 }
 
 export interface ImportResult {

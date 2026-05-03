@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getTodayDateString } from "@/lib/date-utils";
+import { formatDateForInput, formatTimeForInput, getTodayDateString } from "@/lib/date-utils";
 import type { MedicationResponse, MedicationLogResponse } from "@/lib/types";
 
 type MedStatus = "pending" | "upcoming" | "due" | "overdue" | "taken";
@@ -111,6 +111,7 @@ export function MedicationTracker() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
   const [showCustomTime, setShowCustomTime] = useState<Record<string, boolean>>({});
+  const [customDates, setCustomDates] = useState<Record<string, string>>({});
   const [customTimes, setCustomTimes] = useState<Record<string, string>>({});
 
   const today = getTodayDateString();
@@ -193,9 +194,10 @@ export function MedicationTracker() {
 
   // Confirme la prise à une date/heure choisie
   const handleConfirmCustom = (med: MedWithStatus) => {
-    const raw = customTimes[med.id];
-    if (!raw) return;
-    const takenAt = new Date(raw);
+    const d = customDates[med.id];
+    const t = customTimes[med.id];
+    if (!d || !t) return;
+    const takenAt = new Date(`${d}T${t}:00`);
     if (isNaN(takenAt.getTime())) return;
     const dateStr = format(takenAt, "yyyy-MM-dd");
     const scheduledAt = new Date(`${dateStr}T${med.time}:00`);
@@ -207,12 +209,10 @@ export function MedicationTracker() {
   const toggleCustomTime = (medId: string) => {
     setShowCustomTime((prev) => {
       const next = !prev[medId];
-      if (next && !customTimes[medId]) {
-        // Pré-remplir avec l'heure actuelle
-        setCustomTimes((ct) => ({
-          ...ct,
-          [medId]: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-        }));
+      if (next && !customDates[medId]) {
+        const now = new Date();
+        setCustomDates((cd) => ({ ...cd, [medId]: formatDateForInput(now) }));
+        setCustomTimes((ct) => ({ ...ct, [medId]: formatTimeForInput(now) }));
       }
       return { ...prev, [medId]: next };
     });
@@ -300,29 +300,40 @@ export function MedicationTracker() {
                 {/* Panneau de saisie d'heure personnalisée */}
                 {showCustomTime[med.id] && (
                   <div className="space-y-2 pt-1 border-t border-border/50">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">
-                        Date et heure de prise
-                      </Label>
-                      <Input
-                        type="datetime-local"
-                        value={customTimes[med.id] || ""}
-                        max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
-                        onChange={(e) =>
-                          setCustomTimes((prev) => ({
-                            ...prev,
-                            [med.id]: e.target.value,
-                          }))
-                        }
-                        className="h-9 text-sm"
-                      />
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Date</Label>
+                        <Input
+                          type="date"
+                          value={customDates[med.id] || ""}
+                          onChange={(e) =>
+                            setCustomDates((prev) => ({
+                              ...prev,
+                              [med.id]: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Heure</Label>
+                        <Input
+                          type="time"
+                          value={customTimes[med.id] || ""}
+                          onChange={(e) =>
+                            setCustomTimes((prev) => ({
+                              ...prev,
+                              [med.id]: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
                     </div>
                     <Button
                       variant="secondary"
                       size="sm"
                       className="w-full gap-2"
                       onClick={() => handleConfirmCustom(med)}
-                      disabled={submitting[med.id] || !customTimes[med.id]}
+                      disabled={submitting[med.id] || !customDates[med.id] || !customTimes[med.id]}
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       {submitting[med.id] ? "Enregistrement…" : "Confirmer à cette heure"}
