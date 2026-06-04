@@ -185,37 +185,24 @@ export function BowelMovementTracker() {
           </div>
 
           {/* Slider */}
-          <div className="space-y-1 px-1">
-            <Slider
-              min={1}
-              max={7}
-              step={1}
-              value={[bristolValue]}
-              onValueChange={(v) => setBristolValue(v[0] ?? 4)}
-              aria-label="Type Bristol"
-            />
-            {/* Tick marks */}
-            <div className="flex justify-between px-[6px]">
-              {BRISTOL_SCALE.map((b) => (
-                <div key={b.type} className="flex flex-col items-center gap-0.5">
-                  <div className={cn(
-                    "w-0.5 h-1.5 rounded-full transition-colors",
-                    bristolValue === b.type ? "bg-primary" : "bg-muted-foreground/30"
-                  )} />
-                  <span className={cn(
-                    "text-[10px] tabular-nums transition-colors",
-                    bristolValue === b.type
-                      ? "text-foreground font-semibold"
-                      : "text-muted-foreground/60"
-                  )}>
-                    {b.type}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>Dur</span>
-              <span>Liquide</span>
+          <div className="space-y-1.5">
+            <Label className="flex items-center justify-between gap-2">
+              Type Bristol
+              <span className="font-semibold text-primary">{bristolValue}/7</span>
+            </Label>
+            <div className="space-y-1.5 pt-1">
+              <Slider
+                min={1}
+                max={7}
+                step={1}
+                value={[bristolValue]}
+                onValueChange={(v) => setBristolValue(v[0] ?? 4)}
+                aria-label="Type Bristol"
+              />
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Dur (1)</span>
+                <span>Liquide (7)</span>
+              </div>
             </div>
           </div>
 
