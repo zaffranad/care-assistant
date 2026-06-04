@@ -19,38 +19,13 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDateForInput, formatTimeForInput, getTodayDateString } from "@/lib/date-utils";
+import {
+  BRISTOL_SCALE,
+  getBristolColor,
+  getBristolBgClass,
+  getCategoryBadgeClasses,
+} from "@/lib/bristol";
 import type { BowelMovementResponse } from "@/lib/types";
-
-const BRISTOL_SCALE = [
-  { type: 1, description: "Billes dures séparées", category: "Constipation", emoji: "⚫" },
-  { type: 2, description: "En saucisse, grumeleuse", category: "Constipation", emoji: "🟤" },
-  { type: 3, description: "En saucisse, fissurée", category: "Normal", emoji: "🟫" },
-  { type: 4, description: "Lisse et souple", category: "Normal", emoji: "🟢" },
-  { type: 5, description: "Morceaux mous", category: "Mou", emoji: "🟡" },
-  { type: 6, description: "Floconneuse, pâteuse", category: "Diarrhée", emoji: "🟠" },
-  { type: 7, description: "Liquide, sans morceaux", category: "Diarrhée", emoji: "🔴" },
-] as const;
-
-function getBristolColor(type: number): string {
-  if (type <= 2) return "text-amber-700 dark:text-amber-400";
-  if (type <= 4) return "text-green-600 dark:text-green-400";
-  if (type <= 5) return "text-yellow-600 dark:text-yellow-400";
-  return "text-orange-600 dark:text-orange-400";
-}
-
-function getBristolBgClass(type: number): string {
-  if (type <= 2) return "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900";
-  if (type <= 4) return "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900";
-  if (type <= 5) return "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900";
-  return "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900";
-}
-
-function getCategoryBadgeClasses(type: number): string {
-  if (type <= 2) return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
-  if (type <= 4) return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
-  if (type <= 5) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300";
-  return "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300";
-}
 
 export function BowelMovementTracker() {
   const [movements, setMovements] = useState<BowelMovementResponse[]>([]);

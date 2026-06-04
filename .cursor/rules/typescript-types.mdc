@@ -8,7 +8,9 @@ alwaysApply: false
 
 ## Shared Types Location
 
-All shared types live in `src/lib/types.ts`. Import as `import type { ... } from "@/lib/types"`.
+All shared API/DTO types live in `src/lib/types.ts`. Import as `import type { ... } from "@/lib/types"`.
+
+Domain-specific types co-locate with their helper module (e.g., `BristolCategory` / `BristolInfo` in `@/lib/bristol`). Keep `types.ts` for cross-cutting request/response shapes.
 
 ## Naming Conventions
 

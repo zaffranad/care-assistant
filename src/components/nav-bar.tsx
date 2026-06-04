@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Activity, ClipboardPlus, BarChart3, Settings, Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,9 +70,11 @@ export function NavBar() {
           {session?.user && (
             <>
               {session.user.image && (
-                <img
+                <Image
                   src={session.user.image}
                   alt={session.user.name ?? "Avatar"}
+                  width={32}
+                  height={32}
                   className="ml-2 h-8 w-8 rounded-full"
                   referrerPolicy="no-referrer"
                 />

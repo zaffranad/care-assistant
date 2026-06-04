@@ -28,6 +28,21 @@ export function getTodayDateString(): string {
 }
 
 /**
+ * Formats a minute offset relative to a scheduled time.
+ * 0 → "à l'heure", positive → "+1h30", negative → "−45min".
+ */
+export function formatDelta(delta: number): string {
+  if (delta === 0) return "à l'heure";
+  const abs = Math.abs(delta);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  const prefix = delta < 0 ? "−" : "+";
+  if (h > 0 && m > 0) return `${prefix}${h}h${m.toString().padStart(2, "0")}`;
+  if (h > 0) return `${prefix}${h}h`;
+  return `${prefix}${m}min`;
+}
+
+/**
  * Returns a color based on intensity (1-10)
  * Green (low) -> Yellow (medium) -> Red (high)
  */

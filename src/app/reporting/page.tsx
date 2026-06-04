@@ -17,8 +17,9 @@ import { IntensityChart } from "@/components/intensity-chart";
 import { ExportButton } from "@/components/export-button";
 import { BowelMovementChart } from "@/components/bowel-movement-chart";
 import { Clock, TrendingUp, Filter, ChevronLeft, ChevronRight, Activity } from "lucide-react";
-import { subDays, format, eachDayOfInterval, parseISO, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
+import { subDays, format, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
 import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
+import { computeMissedEntries } from "@/lib/medication-utils";
 import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
@@ -224,79 +225,15 @@ export default function ReportingPage() {
 
   // Compute missed medication entries: medications with no log in the date range
   const missedEntries = useMemo((): MissedMedicationEntry[] => {
-    if (nameFilter !== "all" || medications.length === 0) return [];
-
+    if (nameFilter !== "all") return [];
     const { from, to } = getDateRange();
-    const today = format(new Date(), "yyyy-MM-dd");
-    const startDate = from ?? (
-      medications.reduce((min, m) => {
-        const d = m.createdAt.split("T")[0];
-        return d < min ? d : min;
-      }, today)
-    );
-    const endDate = to ?? today;
-
-    if (startDate > endDate) return [];
-
-    const days = eachDayOfInterval({
-      start: parseISO(startDate),
-      end: parseISO(endDate),
-    });
-
-    const loggedSet = new Set(medLogs.map((l) => `${l.medicationId}|${l.date}`));
-
-    const missed: MissedMedicationEntry[] = [];
-    for (const day of days) {
-      const dateStr = format(day, "yyyy-MM-dd");
-      for (const med of medications) {
-        const medCreatedDate = med.createdAt.split("T")[0];
-        if (medCreatedDate > dateStr) continue;
-        if (!loggedSet.has(`${med.id}|${dateStr}`)) {
-          missed.push({
-            medicationId: med.id,
-            medication: med,
-            date: dateStr,
-            scheduledTime: med.time,
-          });
-        }
-      }
-    }
-    return missed;
+    return computeMissedEntries(medications, medLogs, from, to);
   }, [medications, medLogs, getDateRange, nameFilter]);
 
   const timelineMissedEntries = useMemo((): MissedMedicationEntry[] => {
-    if (nameFilter !== "all" || medications.length === 0) return [];
-
+    if (nameFilter !== "all") return [];
     const { from, to } = timelineWeekRange;
-    const startDate = from;
-    const endDate = to;
-
-    if (startDate > endDate) return [];
-
-    const days = eachDayOfInterval({
-      start: parseISO(startDate),
-      end: parseISO(endDate),
-    });
-
-    const loggedSet = new Set(timelineMedLogs.map((l) => `${l.medicationId}|${l.date}`));
-
-    const missed: MissedMedicationEntry[] = [];
-    for (const day of days) {
-      const dateStr = format(day, "yyyy-MM-dd");
-      for (const med of medications) {
-        const medCreatedDate = med.createdAt.split("T")[0];
-        if (medCreatedDate > dateStr) continue;
-        if (!loggedSet.has(`${med.id}|${dateStr}`)) {
-          missed.push({
-            medicationId: med.id,
-            medication: med,
-            date: dateStr,
-            scheduledTime: med.time,
-          });
-        }
-      }
-    }
-    return missed;
+    return computeMissedEntries(medications, timelineMedLogs, from, to);
   }, [medications, timelineMedLogs, timelineWeekRange, nameFilter]);
 
   return (

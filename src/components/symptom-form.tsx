@@ -74,7 +74,7 @@ export function SymptomForm({ onSubmit }: SymptomFormProps) {
           description: error.error || "Veuillez réessayer dans quelques instants.",
         });
       }
-    } catch (error) {
+    } catch {
       toast.error("Erreur de connexion", {
         description: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
       });

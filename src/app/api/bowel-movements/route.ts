@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUserId } from "@/lib/auth";
+import { occurredAtRange } from "@/lib/query-utils";
+import { Prisma } from "@/generated/prisma/client";
 
 // GET /api/bowel-movements?date=YYYY-MM-DD or ?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(request: NextRequest) {
@@ -11,27 +13,16 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get("date");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
+    const range = occurredAtRange(
+      searchParams.get("date"),
+      searchParams.get("from"),
+      searchParams.get("to")
+    );
 
-    let where: Record<string, unknown> = { userId };
-
-    if (date) {
-      const dayStart = new Date(`${date}T00:00:00.000Z`);
-      const dayEnd = new Date(`${date}T23:59:59.999Z`);
-      where = {
-        userId,
-        occurredAt: { gte: dayStart, lte: dayEnd },
-      };
-    } else if (from && to) {
-      const fromDate = new Date(`${from}T00:00:00.000Z`);
-      const toDate = new Date(`${to}T23:59:59.999Z`);
-      where = {
-        userId,
-        occurredAt: { gte: fromDate, lte: toDate },
-      };
-    }
+    const where: Prisma.BowelMovementWhereInput = {
+      userId,
+      ...(range ? { occurredAt: range } : {}),
+    };
 
     const movements = await prisma.bowelMovement.findMany({
       where,

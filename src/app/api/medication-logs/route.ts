@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUserId } from "@/lib/auth";
+import { dateStringRange } from "@/lib/query-utils";
+import { Prisma } from "@/generated/prisma/client";
 
 // GET /api/medication-logs?date=YYYY-MM-DD or ?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(request: NextRequest) {
@@ -11,28 +13,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get("date");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
+    const range = dateStringRange(
+      searchParams.get("date"),
+      searchParams.get("from"),
+      searchParams.get("to")
+    );
 
-    let dateFilter: Record<string, unknown> = {};
-
-    if (date) {
-      dateFilter = { date };
-    } else if (from && to) {
-      dateFilter = {
-        date: {
-          gte: from,
-          lte: to,
-        },
-      };
-    }
+    const where: Prisma.MedicationLogWhereInput = {
+      medication: { userId },
+      ...(range ? { date: range } : {}),
+    };
 
     const logs = await prisma.medicationLog.findMany({
-      where: {
-        ...dateFilter,
-        medication: { userId },
-      },
+      where,
       include: { medication: true },
       orderBy: { takenAt: "desc" },
     });

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { format } from "date-fns";
+import { getBristolCategory } from "@/lib/bristol";
 import type { SymptomResponse, BowelMovementResponse } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -46,7 +47,7 @@ function exportCSV(symptoms: SymptomResponse[], bowelMovements: BowelMovementRes
       const d = new Date(bm.occurredAt);
       const date = format(d, "yyyy-MM-dd");
       const time = format(d, "HH:mm");
-      const cat = bm.bristolType <= 2 ? "Constipation" : bm.bristolType <= 4 ? "Normal" : bm.bristolType <= 5 ? "Mou" : "Diarrhée";
+      const cat = getBristolCategory(bm.bristolType);
       const notes = bm.notes ? `"${bm.notes.replace(/"/g, '""')}"` : "";
       return `Selle,${date},${time},${bm.bristolType},${cat},${notes}`;
     });
@@ -99,7 +100,7 @@ export function ExportButton({ symptoms, bowelMovements = [], format: fmt }: Exp
         exportJSON(symptoms, bowelMovements);
         toast.success("Fichier JSON exporté avec succès");
       }
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors de l'export", {
         description: "Une erreur est survenue lors de la génération du fichier.",
       });

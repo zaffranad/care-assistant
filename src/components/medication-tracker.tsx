@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { formatDateForInput, formatTimeForInput, getTodayDateString } from "@/lib/date-utils";
+import { formatDateForInput, formatTimeForInput, getTodayDateString, formatDelta } from "@/lib/date-utils";
 import type { MedicationResponse, MedicationLogResponse } from "@/lib/types";
 
 type MedStatus = "pending" | "upcoming" | "due" | "overdue" | "taken";
@@ -53,17 +53,6 @@ function getMedStatus(
   if (diff > 0) return { status: "upcoming", minutesUntil: diff };
   if (diff > -30) return { status: "due", minutesUntil: diff };
   return { status: "overdue", minutesUntil: diff };
-}
-
-function formatDelta(delta: number): string {
-  if (delta === 0) return "à l'heure";
-  const abs = Math.abs(delta);
-  const h = Math.floor(abs / 60);
-  const m = abs % 60;
-  const prefix = delta < 0 ? "−" : "+";
-  if (h > 0 && m > 0) return `${prefix}${h}h${m.toString().padStart(2, "0")}`;
-  if (h > 0) return `${prefix}${h}h`;
-  return `${prefix}${m}min`;
 }
 
 function StatusBadge({ status }: { status: MedStatus }) {

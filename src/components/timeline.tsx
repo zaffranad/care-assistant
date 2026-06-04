@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatShortDate, formatTime, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
+import { formatShortDate, formatTime, formatDelta, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
+import { BRISTOL_LABELS } from "@/lib/bristol";
 import { Pill, Sparkles } from "lucide-react";
 import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
 
@@ -30,16 +31,6 @@ interface GroupedEvents {
   label: string;
   items: TimelineEvent[];
 }
-
-const BRISTOL_LABELS: Record<number, string> = {
-  1: "Billes dures séparées",
-  2: "En saucisse, grumeleuse",
-  3: "En saucisse, fissurée",
-  4: "Lisse et souple",
-  5: "Morceaux mous",
-  6: "Floconneuse, pâteuse",
-  7: "Liquide, sans morceaux",
-};
 
 function buildEvents(
   symptoms: SymptomResponse[],
@@ -124,17 +115,6 @@ function groupByDate(events: TimelineEvent[]): GroupedEvents[] {
       label: formatShortDate(new Date(dateKey + "T12:00:00")),
       items: items.sort((a, b) => b.time.getTime() - a.time.getTime()),
     }));
-}
-
-function formatDelta(delta: number): string {
-  if (delta === 0) return "à l'heure";
-  const abs = Math.abs(delta);
-  const h = Math.floor(abs / 60);
-  const m = abs % 60;
-  const prefix = delta < 0 ? "−" : "+";
-  if (h > 0 && m > 0) return `${prefix}${h}h${m.toString().padStart(2, "0")}`;
-  if (h > 0) return `${prefix}${h}h`;
-  return `${prefix}${m}min`;
 }
 
 export function Timeline({

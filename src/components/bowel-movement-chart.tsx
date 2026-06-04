@@ -14,27 +14,11 @@ import {
 } from "recharts";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { BRISTOL_LABELS, getBristolBarColor } from "@/lib/bristol";
 import type { BowelMovementResponse } from "@/lib/types";
 
 interface BowelMovementChartProps {
   bowelMovements: BowelMovementResponse[];
-}
-
-const BRISTOL_LABELS: Record<number, string> = {
-  1: "Billes dures séparées",
-  2: "En saucisse, grumeleuse",
-  3: "En saucisse, fissurée",
-  4: "Lisse et souple",
-  5: "Morceaux mous",
-  6: "Floconneuse, pâteuse",
-  7: "Liquide, sans morceaux",
-};
-
-function getBristolBarColor(type: number): string {
-  if (type <= 2) return "oklch(0.60 0.15 70)";
-  if (type <= 4) return "oklch(0.65 0.18 150)";
-  if (type === 5) return "oklch(0.70 0.15 80)";
-  return "oklch(0.60 0.20 25)";
 }
 
 interface ChartDataPoint {

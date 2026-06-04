@@ -54,6 +54,8 @@ Application web de suivi quotidien de santé : symptômes, médicaments, transit
 | Dates | date-fns (locale `fr`) | 4.1 |
 | Notifications | Sonner | 2.0 |
 | Thème | next-themes | 0.4 |
+| Tests | Vitest | 4.1 |
+| Gestionnaire de paquets | pnpm | 11.x |
 
 ## Architecture
 
@@ -107,11 +109,15 @@ care-assistant/
 │   │   ├── swipe-navigator.tsx # Navigation tactile
 │   │   └── theme-provider.tsx  # Wrapper next-themes
 │   ├── lib/
-│   │   ├── auth.ts         # Config NextAuth + getAuthenticatedUserId()
-│   │   ├── prisma.ts       # Client Prisma singleton (LibSQL adapter)
-│   │   ├── types.ts        # Types TypeScript partagés
-│   │   ├── date-utils.ts   # Formatage dates FR + couleurs intensité
-│   │   └── utils.ts        # cn() (clsx + tailwind-merge)
+│   │   ├── auth.ts            # Config NextAuth + getAuthenticatedUserId()
+│   │   ├── prisma.ts          # Client Prisma singleton (LibSQL adapter)
+│   │   ├── types.ts           # Types TypeScript partagés
+│   │   ├── date-utils.ts      # Formatage dates FR + couleurs intensité + formatDelta
+│   │   ├── bristol.ts         # Échelle de Bristol (libellés, catégories, couleurs)
+│   │   ├── medication-utils.ts # computeMissedEntries (prises manquées)
+│   │   ├── query-utils.ts     # Helpers de filtre date pour Prisma (occurredAt/date)
+│   │   ├── *.test.ts          # Tests unitaires Vitest
+│   │   └── utils.ts           # cn() (clsx + tailwind-merge)
 │   ├── generated/prisma/   # Client Prisma généré (ne pas éditer)
 │   └── middleware.ts        # Protection JWT des routes
 ├── components.json          # Config shadcn/ui
@@ -160,7 +166,7 @@ User ──┬── Account (OAuth Google)
 ### Prérequis
 
 - Node.js v20.19+ ou v22.12+
-- npm
+- pnpm (v11+)
 
 ### Installation
 
@@ -168,11 +174,11 @@ User ──┬── Account (OAuth Google)
 git clone <url-du-repo>
 cd care-assistant
 
-npm install
+pnpm install
 
 npx prisma migrate dev
 
-npm run dev
+pnpm dev
 ```
 
 L'application est accessible sur [http://localhost:3000](http://localhost:3000).
@@ -202,6 +208,8 @@ Générer un `AUTH_SECRET` : `npx auth secret`
 | `npm run build` | Build de production (`prisma generate` + `next build`) |
 | `npm start` | Serveur de production |
 | `npm run lint` | Linter ESLint |
+| `npm test` | Tests unitaires (Vitest, une passe) |
+| `npm run test:watch` | Tests unitaires en mode watch |
 | `npm run db:init-local` | Initialiser la DB locale via SQL |
 | `npm run db:migrate` | Appliquer les migrations Prisma |
 | `npm run db:push` | Pousser le schéma sans migration |

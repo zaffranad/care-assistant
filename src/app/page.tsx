@@ -27,7 +27,7 @@ export default function SaisiePage() {
           description: "Une erreur est survenue lors du chargement.",
         });
       }
-    } catch (error) {
+    } catch {
       toast.error("Erreur de connexion", {
         description: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
       });
@@ -52,7 +52,7 @@ export default function SaisiePage() {
           description: error.error || "Veuillez réessayer.",
         });
       }
-    } catch (error) {
+    } catch {
       toast.error("Erreur de connexion", {
         description: "Impossible de contacter le serveur.",
       });

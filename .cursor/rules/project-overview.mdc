@@ -16,13 +16,15 @@ Medical symptom tracking web app (French UI) with daily logging, reporting, and 
 - **Charts**: Recharts 3
 - **Dates**: date-fns with French locale (`fr`)
 - **Toasts**: Sonner
+- **Tests**: Vitest 4 (`*.test.ts` colocated in `src/lib/`, run via `pnpm test`)
+- **Package manager**: pnpm (single lockfile `pnpm-lock.yaml`)
 
 ## Project Structure
 
 ```
 src/app/           → Pages (App Router) and API route handlers
 src/components/    → Feature components + ui/ (shadcn primitives)
-src/lib/           → auth.ts, prisma.ts, types.ts, date-utils.ts, utils.ts
+src/lib/           → auth.ts, prisma.ts, types.ts, date-utils.ts, bristol.ts, medication-utils.ts, query-utils.ts, utils.ts (+ *.test.ts)
 src/generated/     → Prisma client (auto-generated, never edit)
 prisma/            → schema.prisma, migrations/
 scripts/           → DB init and production migration helpers
