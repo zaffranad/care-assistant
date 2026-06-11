@@ -3,12 +3,13 @@
 import { cn } from "@/lib/utils";
 import { formatShortDate, formatTime, formatDelta, getIntensityBgClass, getIntensityTextClass } from "@/lib/date-utils";
 import { BRISTOL_LABELS } from "@/lib/bristol";
-import { Pill, Sparkles } from "lucide-react";
-import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
+import { Pill, PillBottle, Sparkles } from "lucide-react";
+import type { SymptomResponse, MedicationLogResponse, MedicationIntakeResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
 
 interface TimelineProps {
   symptoms: SymptomResponse[];
   medicationLogs?: MedicationLogResponse[];
+  medicationIntakes?: MedicationIntakeResponse[];
   missedMedications?: MissedMedicationEntry[];
   bowelMovements?: BowelMovementResponse[];
   significantEvents?: SignificantEventResponse[];
@@ -16,11 +17,12 @@ interface TimelineProps {
 
 type TimelineEvent = {
   id: string;
-  type: "symptom" | "medication" | "missed" | "bowel" | "significant";
+  type: "symptom" | "medication" | "intake" | "missed" | "bowel" | "significant";
   date: string; // YYYY-MM-DD
   time: Date;
   symptom?: SymptomResponse;
   medLog?: MedicationLogResponse;
+  intake?: MedicationIntakeResponse;
   missedMed?: MissedMedicationEntry;
   bowelMovement?: BowelMovementResponse;
   significantEvent?: SignificantEventResponse;
@@ -35,6 +37,7 @@ interface GroupedEvents {
 function buildEvents(
   symptoms: SymptomResponse[],
   medLogs: MedicationLogResponse[],
+  intakes: MedicationIntakeResponse[],
   missedMeds: MissedMedicationEntry[],
   bowelMovements: BowelMovementResponse[],
   significantEvents: SignificantEventResponse[]
@@ -58,6 +61,16 @@ function buildEvents(
       date: l.date,
       time: new Date(l.takenAt),
       medLog: l,
+    });
+  }
+
+  for (const i of intakes) {
+    events.push({
+      id: i.id,
+      type: "intake",
+      date: new Date(i.takenAt).toISOString().split("T")[0],
+      time: new Date(i.takenAt),
+      intake: i,
     });
   }
 
@@ -120,11 +133,12 @@ function groupByDate(events: TimelineEvent[]): GroupedEvents[] {
 export function Timeline({
   symptoms,
   medicationLogs = [],
+  medicationIntakes = [],
   missedMedications = [],
   bowelMovements = [],
   significantEvents = [],
 }: TimelineProps) {
-  const events = buildEvents(symptoms, medicationLogs, missedMedications, bowelMovements, significantEvents);
+  const events = buildEvents(symptoms, medicationLogs, medicationIntakes, missedMedications, bowelMovements, significantEvents);
   const grouped = groupByDate(events);
 
   if (events.length === 0) {
@@ -224,6 +238,33 @@ export function Timeline({
                         {formatTime(event.medLog.takenAt)}
                       </span>
                     </div>
+                  </div>
+                </div>
+              ) : event.type === "intake" && event.intake ? (
+                <div
+                  key={event.id}
+                  className="relative flex items-start gap-3"
+                >
+                  <div className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 border-background bg-sky-500" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <PillBottle className="h-3.5 w-3.5 text-sky-500" />
+                      <span className="font-medium">{event.intake.name}</span>
+                      <span className="text-xs text-sky-600 dark:text-sky-400 font-medium">
+                        {event.intake.dosage} mg
+                      </span>
+                      <span className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400 font-medium px-1.5 py-0.5 rounded">
+                        Ponctuel
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {formatTime(event.intake.takenAt)}
+                      </span>
+                    </div>
+                    {event.intake.notes && (
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                        {event.intake.notes}
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : event.type === "missed" && event.missedMed ? (

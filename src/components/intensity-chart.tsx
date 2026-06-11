@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import type { SymptomResponse, MedicationLogResponse, MissedMedicationEntry, SignificantEventResponse } from "@/lib/types";
+import type { SymptomResponse, MedicationLogResponse, MedicationIntakeResponse, MissedMedicationEntry, SignificantEventResponse } from "@/lib/types";
 
 const CHART_COLORS = [
   "oklch(0.55 0.20 270)",
@@ -38,6 +38,7 @@ interface MedEvent {
 interface IntensityChartProps {
   symptoms: SymptomResponse[];
   medicationLogs?: MedicationLogResponse[];
+  medicationIntakes?: MedicationIntakeResponse[];
   missedMedications?: MissedMedicationEntry[];
   significantEvents?: SignificantEventResponse[];
 }
@@ -49,6 +50,7 @@ type ChartDataPoint = {
   _medStatus: MedStatus;
   _eventMarker?: number;
   medEvents: MedEvent[];
+  medicationIntakes: MedicationIntakeResponse[];
   significantEvents: SignificantEventResponse[];
   [key: string]: unknown;
 };
@@ -103,6 +105,7 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 
   const point = payload[0]?.payload as ChartDataPoint;
   const medEvents = (point.medEvents || []) as MedEvent[];
+  const medicationIntakes = (point.medicationIntakes || []) as MedicationIntakeResponse[];
   const significantEvents = (point.significantEvents || []) as SignificantEventResponse[];
   const symptomEntries = payload.filter(
     (p) =>
@@ -158,9 +161,23 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
           ))}
         </>
       )}
-      {significantEvents.length > 0 && (
+      {medicationIntakes.length > 0 && (
         <>
           {(symptomEntries.length > 0 || medEvents.length > 0) && (
+            <hr style={{ margin: "6px 0", opacity: 0.25 }} />
+          )}
+          <p style={{ fontWeight: 500, marginBottom: 4 }}>Prises ponctuelles :</p>
+          {medicationIntakes.map((intake) => (
+            <p key={intake.id} style={{ color: "#0284c7", margin: "2px 0" }}>
+              💊 {intake.name} {intake.dosage} mg —{" "}
+              {format(new Date(intake.takenAt), "HH:mm", { locale: fr })}
+            </p>
+          ))}
+        </>
+      )}
+      {significantEvents.length > 0 && (
+        <>
+          {(symptomEntries.length > 0 || medEvents.length > 0 || medicationIntakes.length > 0) && (
             <hr style={{ margin: "6px 0", opacity: 0.25 }} />
           )}
           <p style={{ fontWeight: 500, marginBottom: 4 }}>Faits marquants :</p>
@@ -178,13 +195,15 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 export function IntensityChart({
   symptoms,
   medicationLogs = [],
+  medicationIntakes = [],
   missedMedications = [],
   significantEvents = [],
 }: IntensityChartProps) {
   const hasMedData = medicationLogs.length > 0 || missedMedications.length > 0;
+  const hasIntakes = medicationIntakes.length > 0;
   const hasSignificantEvents = significantEvents.length > 0;
 
-  if (symptoms.length === 0 && !hasMedData && !hasSignificantEvents) {
+  if (symptoms.length === 0 && !hasMedData && !hasIntakes && !hasSignificantEvents) {
     return (
       <p className="text-muted-foreground text-center py-8">
         Pas assez de données pour afficher le graphique.
@@ -203,6 +222,7 @@ export function IntensityChart({
   }
 
   const medEventMap: Record<string, MedEvent[]> = {};
+  const intakeMap: Record<string, MedicationIntakeResponse[]> = {};
   const significantEventMap: Record<string, SignificantEventResponse[]> = {};
 
   for (const log of medicationLogs) {
@@ -228,7 +248,13 @@ export function IntensityChart({
     });
   }
 
-  for (const dateKey of Object.keys(medEventMap)) {
+  for (const intake of medicationIntakes) {
+    const dateKey = new Date(intake.takenAt).toISOString().split("T")[0];
+    if (!intakeMap[dateKey]) intakeMap[dateKey] = [];
+    intakeMap[dateKey].push(intake);
+  }
+
+  for (const dateKey of [...Object.keys(medEventMap), ...Object.keys(intakeMap)]) {
     if (!dateMap[dateKey]) dateMap[dateKey] = {};
   }
 
@@ -263,6 +289,7 @@ export function IntensityChart({
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([dateKey, values]) => {
       const events = medEventMap[dateKey] ?? [];
+      const dayIntakes = intakeMap[dateKey] ?? [];
       const daySignificantEvents = significantEventMap[dateKey] ?? [];
       return {
         date: dateKey,
@@ -273,6 +300,7 @@ export function IntensityChart({
         _medStatus: dominantStatus(events),
         _eventMarker: daySignificantEvents.length > 0 ? 10 : undefined,
         medEvents: events,
+        medicationIntakes: dayIntakes,
         significantEvents: daySignificantEvents,
         ...values,
       };

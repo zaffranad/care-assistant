@@ -23,6 +23,7 @@ model User {
   predefinedSymptoms PredefinedSymptom[]
   bowelMovements     BowelMovement[]
   significantEvents  SignificantEvent[]
+  medicationIntakes  MedicationIntake[]
 }
 
 model Account {
@@ -133,6 +134,22 @@ model SignificantEvent {
 
   @@index([date])
   @@index([date, time])
+  @@index([userId])
+}
+
+// Prise ponctuelle de médicament, hors traitement régulier (ex. un Doliprane 500 mg à 18h)
+model MedicationIntake {
+  id        String   @id @default(cuid())
+  name      String
+  dosage    Int      // dose en mg
+  notes     String?
+  takenAt   DateTime // date/heure réelle de la prise
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([takenAt])
   @@index([userId])
 }
 

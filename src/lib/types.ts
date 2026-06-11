@@ -42,6 +42,28 @@ export interface MedicationLogResponse {
   createdAt: string;
 }
 
+export interface MedicationIntakeFormData {
+  name: string;
+  dosage: number; // mg
+  notes?: string;
+  takenAt: string; // ISO string
+}
+
+export interface MedicationIntakeResponse {
+  id: string;
+  name: string;
+  dosage: number;
+  notes: string | null;
+  takenAt: string;
+  createdAt: string;
+}
+
+// Suggestion d'autocomplétion pour la saisie d'une prise ponctuelle
+export interface IntakeSuggestion {
+  name: string;
+  dosage: number; // dernier dosage connu en mg
+}
+
 export interface MissedMedicationEntry {
   medicationId: string;
   medication: MedicationResponse;
@@ -88,6 +110,7 @@ export interface ExportData {
   })[];
   bowelMovements?: Omit<BowelMovementResponse, "id">[];
   significantEvents?: Omit<SignificantEventResponse, "id" | "updatedAt">[];
+  medicationIntakes?: Omit<MedicationIntakeResponse, "id">[];
 }
 
 export interface ExportMetrics {
@@ -97,6 +120,7 @@ export interface ExportMetrics {
   medicationLogs: number;
   bowelMovements: number;
   significantEvents: number;
+  medicationIntakes: number;
 }
 
 export interface ImportResult {
