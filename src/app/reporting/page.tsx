@@ -18,7 +18,7 @@ import { ExportButton } from "@/components/export-button";
 import { BowelMovementChart } from "@/components/bowel-movement-chart";
 import { Clock, TrendingUp, Filter, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 import { subDays, format, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
-import type { SymptomResponse, MedicationLogResponse, MedicationResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
+import type { SymptomResponse, MedicationLogResponse, MedicationIntakeResponse, MedicationResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
 import { computeMissedEntries } from "@/lib/medication-utils";
 import { toast } from "sonner";
 
@@ -34,11 +34,13 @@ const periodOptions: { value: PeriodFilter; label: string }[] = [
 export default function ReportingPage() {
   const [symptoms, setSymptoms] = useState<SymptomResponse[]>([]);
   const [medLogs, setMedLogs] = useState<MedicationLogResponse[]>([]);
+  const [medIntakes, setMedIntakes] = useState<MedicationIntakeResponse[]>([]);
   const [medications, setMedications] = useState<MedicationResponse[]>([]);
   const [bowelMovements, setBowelMovements] = useState<BowelMovementResponse[]>([]);
   const [significantEvents, setSignificantEvents] = useState<SignificantEventResponse[]>([]);
   const [timelineSymptoms, setTimelineSymptoms] = useState<SymptomResponse[]>([]);
   const [timelineMedLogs, setTimelineMedLogs] = useState<MedicationLogResponse[]>([]);
+  const [timelineMedIntakes, setTimelineMedIntakes] = useState<MedicationIntakeResponse[]>([]);
   const [timelineBowelMovements, setTimelineBowelMovements] = useState<BowelMovementResponse[]>([]);
   const [timelineSignificantEvents, setTimelineSignificantEvents] = useState<SignificantEventResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,9 +68,10 @@ export default function ReportingPage() {
       const { from, to } = getDateRange();
       const dateParams = from && to ? `?from=${from}&to=${to}` : "";
 
-      const [sympRes, medRes, medsRes, bowelRes, significantRes] = await Promise.all([
+      const [sympRes, medRes, intakeRes, medsRes, bowelRes, significantRes] = await Promise.all([
         fetch(`/api/symptoms${dateParams}`),
         fetch(`/api/medication-logs${dateParams}`),
+        fetch(`/api/medication-intakes${dateParams}`),
         fetch(`/api/medications?all=true`),
         fetch(`/api/bowel-movements${dateParams}`),
         fetch(`/api/significant-events${dateParams}`),
@@ -82,6 +85,10 @@ export default function ReportingPage() {
 
       if (medRes.ok) {
         setMedLogs(await medRes.json());
+      }
+
+      if (intakeRes.ok) {
+        setMedIntakes(await intakeRes.json());
       }
 
       if (medsRes.ok) {
@@ -126,9 +133,10 @@ export default function ReportingPage() {
       const { from, to } = timelineWeekRange;
       const dateParams = `?from=${from}&to=${to}`;
 
-      const [sympRes, medRes, bowelRes, significantRes] = await Promise.all([
+      const [sympRes, medRes, intakeRes, bowelRes, significantRes] = await Promise.all([
         fetch(`/api/symptoms${dateParams}`),
         fetch(`/api/medication-logs${dateParams}`),
+        fetch(`/api/medication-intakes${dateParams}`),
         fetch(`/api/bowel-movements${dateParams}`),
         fetch(`/api/significant-events${dateParams}`),
       ]);
@@ -143,6 +151,10 @@ export default function ReportingPage() {
         setTimelineMedLogs(await medRes.json());
       } else {
         toast.error("Impossible de charger les prises de la timeline");
+      }
+
+      if (intakeRes.ok) {
+        setTimelineMedIntakes(await intakeRes.json());
       }
 
       if (bowelRes.ok) {
@@ -201,6 +213,16 @@ export default function ReportingPage() {
   const filteredTimelineMedLogs = useMemo(
     () => (nameFilter === "all" ? timelineMedLogs : []),
     [timelineMedLogs, nameFilter]
+  );
+
+  const filteredMedIntakes = useMemo(
+    () => (nameFilter === "all" ? medIntakes : []),
+    [medIntakes, nameFilter]
+  );
+
+  const filteredTimelineMedIntakes = useMemo(
+    () => (nameFilter === "all" ? timelineMedIntakes : []),
+    [timelineMedIntakes, nameFilter]
   );
 
   const filteredBowelMovements = useMemo(
@@ -326,6 +348,7 @@ export default function ReportingPage() {
               <IntensityChart
                 symptoms={filteredSymptoms}
                 medicationLogs={filteredMedLogs}
+                medicationIntakes={filteredMedIntakes}
                 missedMedications={missedEntries}
                 significantEvents={filteredSignificantEvents}
               />
@@ -415,6 +438,7 @@ export default function ReportingPage() {
                 <Timeline
                   symptoms={filteredTimelineSymptoms}
                   medicationLogs={filteredTimelineMedLogs}
+                  medicationIntakes={filteredTimelineMedIntakes}
                   missedMedications={timelineMissedEntries}
                   bowelMovements={filteredTimelineBowelMovements}
                   significantEvents={filteredTimelineSignificantEvents}
