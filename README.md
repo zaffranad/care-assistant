@@ -7,6 +7,7 @@ Application web de suivi quotidien de santé : symptômes, médicaments, transit
 ### Saisie quotidienne (page d'accueil)
 
 - **Suivi de médicaments** : prise quotidienne avec heure prévue vs heure réelle, calcul du décalage
+- **Prises ponctuelles** : saisie libre d'un médicament hors traitement régulier (ex. un Doliprane 500 mg à 18h), avec note optionnelle
 - **Transit intestinal** : saisie sur l'échelle de Bristol (1-7) avec notes et horodatage
 - **Faits marquants** : texte libre avec date et heure pour noter un événement important
 - **Saisie de symptômes** : nom (prédéfini ou libre), intensité (1-10), notes, date/heure
@@ -17,7 +18,7 @@ Application web de suivi quotidien de santé : symptômes, médicaments, transit
 
 - **Graphique d'intensité** : courbe d'évolution par symptôme dans le temps avec marqueurs de faits marquants (Recharts)
 - **Graphique transit** : évolution de l'échelle de Bristol dans le temps
-- **Timeline** : vue chronologique par semaine de tous les événements (symptômes, prises de médicaments, transit, faits marquants)
+- **Timeline** : vue chronologique par semaine de tous les événements (symptômes, prises de médicaments régulières et ponctuelles, transit, faits marquants)
 - **Prises manquées** : détection automatique des médicaments non pris
 - **Filtres rapides** : période par boutons (7j, 30j, 90j, tout) et événement par menu compact
 - **Export** : CSV et JSON filtrés par la période sélectionnée
@@ -64,11 +65,9 @@ care-assistant/
 ├── .cursor/rules/          # Règles Cursor pour l'IA (vibe coding)
 ├── prisma/
 │   ├── schema.prisma       # Schéma de données (10 modèles)
-│   ├── migrations/         # Historique des migrations
-│   ├── dev.db              # Base SQLite locale (dev)
-│   └── *.sql               # Scripts SQL utilitaires
+│   ├── migrations/         # Historique des migrations (source de vérité)
+│   └── dev.db              # Base SQLite locale (dev)
 ├── scripts/
-│   ├── init-local-db.mjs   # Initialisation DB locale
 │   └── migrate-prod-*.mjs  # Scripts de migration Turso (prod)
 ├── src/
 │   ├── app/
@@ -87,6 +86,7 @@ care-assistant/
 │   │       ├── predefined-symptoms/ # Gestion liste prédéfinie
 │   │       ├── medications/         # CRUD médicaments
 │   │       ├── medication-logs/     # Logs de prise quotidienne
+│   │       ├── medication-intakes/  # Prises ponctuelles
 │   │       ├── bowel-movements/     # CRUD transit intestinal
 │   │       ├── significant-events/  # CRUD faits marquants
 │   │       ├── export/              # Export JSON complet
@@ -97,6 +97,7 @@ care-assistant/
 │   │   ├── symptom-form.tsx    # Formulaire de saisie de symptôme
 │   │   ├── symptom-list.tsx    # Liste des symptômes du jour
 │   │   ├── medication-tracker.tsx    # Suivi de prise quotidienne
+│   │   ├── medication-intake-tracker.tsx # Saisie de prise ponctuelle
 │   │   ├── bowel-movement-tracker.tsx # Saisie transit (Bristol)
 │   │   ├── significant-event-tracker.tsx # Saisie faits marquants
 │   │   ├── timeline.tsx        # Vue chronologique par semaine
@@ -137,6 +138,7 @@ User ──┬── Account (OAuth Google)
        ├── PredefinedSymptom (name, unique par user)
        ├── Medication (name, dosage mg, time HH:mm, active)
        │   └── MedicationLog (date, takenAt, scheduledAt, deltaMinutes)
+       ├── MedicationIntake (name, dosage mg, takenAt, notes) — prise ponctuelle
        ├── BowelMovement (bristolType 1-7, occurredAt, notes)
        └── SignificantEvent (text, date, time)
 ```
@@ -153,6 +155,8 @@ User ──┬── Account (OAuth Google)
 | `/api/medications` | GET, POST | Lister (actifs ou tous) / créer un médicament |
 | `/api/medications/[id]` | PATCH, DELETE | Modifier (posologie, heure, actif) / supprimer |
 | `/api/medication-logs` | GET, POST | Lister / enregistrer une prise (upsert par med+date) |
+| `/api/medication-intakes` | GET, POST | Lister / enregistrer une prise ponctuelle |
+| `/api/medication-intakes/[id]` | DELETE | Supprimer une prise ponctuelle |
 | `/api/bowel-movements` | GET, POST | Lister / créer une entrée transit |
 | `/api/bowel-movements/[id]` | DELETE | Supprimer une entrée transit |
 | `/api/significant-events` | GET, POST | Lister / créer un fait marquant |
@@ -210,8 +214,7 @@ Générer un `AUTH_SECRET` : `npx auth secret`
 | `npm run lint` | Linter ESLint |
 | `npm test` | Tests unitaires (Vitest, une passe) |
 | `npm run test:watch` | Tests unitaires en mode watch |
-| `npm run db:init-local` | Initialiser la DB locale via SQL |
-| `npm run db:migrate` | Appliquer les migrations Prisma |
+| `npm run db:migrate` | Appliquer les migrations Prisma (crée/initialise la DB locale) |
 | `npm run db:push` | Pousser le schéma sans migration |
 | `npm run db:studio` | Interface visuelle Prisma Studio |
 | `npm run migrate:prod-bowel` | Migration prod : table BowelMovement |

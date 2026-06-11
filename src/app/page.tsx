@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { SymptomForm } from "@/components/symptom-form";
 import { SymptomList } from "@/components/symptom-list";
 import { MedicationTracker } from "@/components/medication-tracker";
+import { MedicationIntakeTracker } from "@/components/medication-intake-tracker";
 import { BowelMovementTracker } from "@/components/bowel-movement-tracker";
 import { SignificantEventTracker } from "@/components/significant-event-tracker";
 import { formatFullDate, getTodayDateString } from "@/lib/date-utils";
@@ -68,6 +69,9 @@ export default function SaisiePage() {
 
       {/* Suivi médicaments */}
       <MedicationTracker />
+
+      {/* Prise ponctuelle de médicament */}
+      <MedicationIntakeTracker />
 
       {/* Transit intestinal */}
       <BowelMovementTracker />
