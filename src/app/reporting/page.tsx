@@ -16,10 +16,12 @@ import { TimelineWeekPicker } from "@/components/timeline-week-picker";
 import { IntensityChart } from "@/components/intensity-chart";
 import { ExportButton } from "@/components/export-button";
 import { BowelMovementChart } from "@/components/bowel-movement-chart";
-import { Clock, TrendingUp, Filter, ChevronLeft, ChevronRight, Activity } from "lucide-react";
+import { ReportMetrics } from "@/components/report-metrics";
+import { Clock, TrendingUp, Filter, ChevronLeft, ChevronRight, Activity, Gauge } from "lucide-react";
 import { subDays, format, startOfWeek, endOfWeek, addWeeks, differenceInCalendarWeeks } from "date-fns";
 import type { SymptomResponse, MedicationLogResponse, MedicationIntakeResponse, MedicationResponse, MissedMedicationEntry, BowelMovementResponse, SignificantEventResponse } from "@/lib/types";
 import { computeMissedEntries } from "@/lib/medication-utils";
+import { computePeriodMetrics } from "@/lib/report-metrics";
 import { toast } from "sonner";
 
 type PeriodFilter = "7" | "30" | "90" | "all";
@@ -38,6 +40,10 @@ export default function ReportingPage() {
   const [medications, setMedications] = useState<MedicationResponse[]>([]);
   const [bowelMovements, setBowelMovements] = useState<BowelMovementResponse[]>([]);
   const [significantEvents, setSignificantEvents] = useState<SignificantEventResponse[]>([]);
+  const [prevSymptoms, setPrevSymptoms] = useState<SymptomResponse[]>([]);
+  const [prevMedLogs, setPrevMedLogs] = useState<MedicationLogResponse[]>([]);
+  const [prevBowelMovements, setPrevBowelMovements] = useState<BowelMovementResponse[]>([]);
+  const [prevSignificantEvents, setPrevSignificantEvents] = useState<SignificantEventResponse[]>([]);
   const [timelineSymptoms, setTimelineSymptoms] = useState<SymptomResponse[]>([]);
   const [timelineMedLogs, setTimelineMedLogs] = useState<MedicationLogResponse[]>([]);
   const [timelineMedIntakes, setTimelineMedIntakes] = useState<MedicationIntakeResponse[]>([]);
@@ -62,19 +68,39 @@ export default function ReportingPage() {
     };
   }, [period]);
 
+  // Previous period of the same length, ending the day before the current one starts
+  const getPrevDateRange = useCallback(() => {
+    if (period === "all") return { from: undefined, to: undefined };
+    const days = parseInt(period);
+    return {
+      from: format(subDays(new Date(), 2 * days + 1), "yyyy-MM-dd"),
+      to: format(subDays(new Date(), days + 1), "yyyy-MM-dd"),
+    };
+  }, [period]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { from, to } = getDateRange();
       const dateParams = from && to ? `?from=${from}&to=${to}` : "";
+      const { from: prevFrom, to: prevTo } = getPrevDateRange();
+      const prevParams = prevFrom && prevTo ? `?from=${prevFrom}&to=${prevTo}` : null;
 
-      const [sympRes, medRes, intakeRes, medsRes, bowelRes, significantRes] = await Promise.all([
+      const [sympRes, medRes, intakeRes, medsRes, bowelRes, significantRes, ...prevResponses] = await Promise.all([
         fetch(`/api/symptoms${dateParams}`),
         fetch(`/api/medication-logs${dateParams}`),
         fetch(`/api/medication-intakes${dateParams}`),
         fetch(`/api/medications?all=true`),
         fetch(`/api/bowel-movements${dateParams}`),
         fetch(`/api/significant-events${dateParams}`),
+        ...(prevParams
+          ? [
+              fetch(`/api/symptoms${prevParams}`),
+              fetch(`/api/medication-logs${prevParams}`),
+              fetch(`/api/bowel-movements${prevParams}`),
+              fetch(`/api/significant-events${prevParams}`),
+            ]
+          : []),
       ]);
 
       if (sympRes.ok) {
@@ -102,6 +128,19 @@ export default function ReportingPage() {
       if (significantRes.ok) {
         setSignificantEvents(await significantRes.json());
       }
+
+      if (prevParams) {
+        const [prevSympRes, prevMedRes, prevBowelRes, prevSignificantRes] = prevResponses;
+        setPrevSymptoms(prevSympRes.ok ? await prevSympRes.json() : []);
+        setPrevMedLogs(prevMedRes.ok ? await prevMedRes.json() : []);
+        setPrevBowelMovements(prevBowelRes.ok ? await prevBowelRes.json() : []);
+        setPrevSignificantEvents(prevSignificantRes.ok ? await prevSignificantRes.json() : []);
+      } else {
+        setPrevSymptoms([]);
+        setPrevMedLogs([]);
+        setPrevBowelMovements([]);
+        setPrevSignificantEvents([]);
+      }
     } catch {
       toast.error("Erreur de connexion", {
         description: "Impossible de contacter le serveur.",
@@ -109,7 +148,7 @@ export default function ReportingPage() {
     } finally {
       setLoading(false);
     }
-  }, [getDateRange]);
+  }, [getDateRange, getPrevDateRange]);
 
   const getTimelineWeekRange = useCallback(() => {
     const weekStart = addWeeks(currentWeekStart, -timelineWeekOffset);
@@ -258,6 +297,38 @@ export default function ReportingPage() {
     return computeMissedEntries(medications, timelineMedLogs, from, to);
   }, [medications, timelineMedLogs, timelineWeekRange, nameFilter]);
 
+  const prevMissedEntries = useMemo((): MissedMedicationEntry[] => {
+    if (nameFilter !== "all" || period === "all") return [];
+    const { from, to } = getPrevDateRange();
+    return computeMissedEntries(medications, prevMedLogs, from, to);
+  }, [medications, prevMedLogs, getPrevDateRange, nameFilter, period]);
+
+  const currentMetrics = useMemo(
+    () =>
+      computePeriodMetrics({
+        symptoms: filteredSymptoms,
+        medLogs: filteredMedLogs,
+        missedMedications: missedEntries,
+        bowelMovements: filteredBowelMovements,
+        significantEvents: filteredSignificantEvents,
+      }),
+    [filteredSymptoms, filteredMedLogs, missedEntries, filteredBowelMovements, filteredSignificantEvents]
+  );
+
+  const previousMetrics = useMemo(() => {
+    if (period === "all") return null;
+    return computePeriodMetrics({
+      symptoms:
+        nameFilter === "all"
+          ? prevSymptoms
+          : prevSymptoms.filter((s) => s.name === nameFilter),
+      medLogs: nameFilter === "all" ? prevMedLogs : [],
+      missedMedications: prevMissedEntries,
+      bowelMovements: nameFilter === "all" ? prevBowelMovements : [],
+      significantEvents: nameFilter === "all" ? prevSignificantEvents : [],
+    });
+  }, [period, nameFilter, prevSymptoms, prevMedLogs, prevMissedEntries, prevBowelMovements, prevSignificantEvents]);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl sm:text-3xl font-bold text-center">
@@ -336,6 +407,22 @@ export default function ReportingPage() {
         </div>
       ) : (
         <>
+          {/* Vue d'ensemble */}
+          <section className="space-y-2">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <Gauge className="h-5 w-5 text-primary" />
+              Vue d&apos;ensemble
+              <span className="text-xs font-normal text-muted-foreground">
+                {period === "all" ? "tout l'historique" : `${period} derniers jours`}
+              </span>
+            </h2>
+            <ReportMetrics
+              current={currentMetrics}
+              previous={previousMetrics}
+              symptomOnly={nameFilter !== "all"}
+            />
+          </section>
+
           {/* Graphique d'évolution */}
           <Card>
             <CardHeader>
